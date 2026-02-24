@@ -21,15 +21,43 @@ from nanobot.core.agent_v2 import build_default_registry
 
 log = structlog.get_logger()
 
+VALID_L1_ROLES = {r.value for r in L1Role}
+
+# Mapping of common LLM hallucinated roles to valid L1 roles
+L1_ROLE_ALIASES: dict[str, str] = {
+    "tester": "validator",
+    "testers": "validator",
+    "testing": "validator",
+    "test": "validator",
+    "reviewer": "validator",
+    "designer": "architect",
+    "design": "architect",
+    "planner": "architect",
+    "dev": "coder",
+    "developer": "coder",
+    "programmer": "coder",
+    "engineer": "coder",
+    "investigator": "researcher",
+    "search": "researcher",
+    "evaluator": "analyst",
+    "auditor": "analyst",
+    "runner": "executor",
+    "deployer": "executor",
+    "ops": "executor",
+}
+
 QUEEN_PROMPT = """You are the Queen Orchestrator of the NeuralQuantum Hierarchical Nanobot Swarm.
 
-You command L1 Domain Lead agents, each of which commands their own sub-swarm:
-- coder      -> Code Planner -> Code Writer -> Code Tester -> Code Reviewer
-- researcher -> Web Searcher -> Synthesizer -> Fact Verifier
-- analyst    -> Reasoner -> Critiquer -> Summarizer
-- validator  -> Correctness + Completeness -> Scorer
-- executor   -> Action Planner -> Action Runner
-- architect  -> Solo system design specialist
+You command exactly 6 L1 Domain Lead agents. You MUST only use these exact role names:
+- "coder"      — writes code (has sub-agents: Code Planner, Code Writer, Code Tester, Code Reviewer)
+- "researcher" — investigates topics (has sub-agents: Web Searcher, Synthesizer, Fact Verifier)
+- "analyst"    — reasons and critiques (has sub-agents: Reasoner, Critiquer, Summarizer)
+- "validator"  — verifies correctness and writes tests (has sub-agents: Correctness, Completeness, Scorer)
+- "executor"   — runs actions and deploys (has sub-agents: Action Planner, Action Runner)
+- "architect"  — designs systems (solo specialist, no sub-agents)
+
+IMPORTANT: The l1_role field MUST be one of: coder, researcher, analyst, validator, executor, architect
+Do NOT invent new role names. For testing tasks, use "validator". For design tasks, use "architect".
 
 Decompose the goal into L1-level tasks. Each task will be fully handled by the L1 agent's sub-swarm.
 Design tasks at L1 granularity — do NOT try to specify L2 details.
@@ -166,6 +194,23 @@ class HierarchicalSwarm:
             return {"success": False, "session_id": session_id, "error": str(e)}
 
         l1_tasks = plan.get("l1_tasks", [])
+
+        # Validate and remap L1 roles
+        valid_tasks = []
+        for t in l1_tasks:
+            role = t.get("l1_role", "").lower().strip()
+            if role in VALID_L1_ROLES:
+                t["l1_role"] = role
+                valid_tasks.append(t)
+            elif role in L1_ROLE_ALIASES:
+                remapped = L1_ROLE_ALIASES[role]
+                log.warning("l1_role_remapped", original=role, remapped=remapped, task_id=t.get("id"))
+                t["l1_role"] = remapped
+                valid_tasks.append(t)
+            else:
+                log.warning("l1_role_invalid_dropped", role=role, task_id=t.get("id"))
+
+        l1_tasks = valid_tasks
         log.info("queen_plan_ready", l1_task_count=len(l1_tasks))
         await swarm_state.update_session(session_id, {"task_count": len(l1_tasks)})
 
