@@ -1,0 +1,337 @@
+"""
+OpenClaw/Nellie Integration Connector
+Exposes the nanobot swarm as an OpenAI-compatible endpoint that
+Nellie (OpenClaw agent) can use for sub-agent delegation.
+
+Nellie sends tasks to the swarm via:
+1. OpenAI-compatible chat/completions endpoint (pretends to be a model)
+2. Direct swarm API for advanced orchestration
+3. WebSocket for real-time status updates
+
+This allows Nellie to manage nanobot teams under her supervision.
+"""
+
+import asyncio
+import json
+import time
+import uuid
+import structlog
+from typing import AsyncIterator
+
+from fastapi import APIRouter, HTTPException, Header, Request
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
+from nanobot.core.hierarchical_swarm import HierarchicalSwarm
+from nanobot.core.orchestrator import NanobotSwarm
+from nanobot.state.swarm_state import SwarmStateManager
+
+log = structlog.get_logger()
+
+router = APIRouter(prefix="/v1", tags=["OpenAI-Compatible"])
+
+# Will be set during app startup
+_hierarchical_swarm: HierarchicalSwarm | None = None
+_flat_swarm: NanobotSwarm | None = None
+_state_manager = SwarmStateManager()
+
+
+def set_swarm_instances(
+    hierarchical: HierarchicalSwarm,
+    flat: NanobotSwarm,
+) -> None:
+    """Called during gateway startup to inject swarm instances."""
+    global _hierarchical_swarm, _flat_swarm
+    _hierarchical_swarm = hierarchical
+    _flat_swarm = flat
+
+
+# ── OpenAI-compatible models endpoint ────────────────────────────────────
+
+
+class ModelInfo(BaseModel):
+    id: str
+    object: str = "model"
+    created: int = 1700000000
+    owned_by: str = "neuralquantum"
+
+
+@router.get("/models")
+async def list_models():
+    """Return available models — allows Nellie to discover the swarm."""
+    return {
+        "object": "list",
+        "data": [
+            ModelInfo(id="nanobot-swarm-hierarchical").model_dump(),
+            ModelInfo(id="nanobot-swarm-flat").model_dump(),
+            ModelInfo(id="nanobot-reasoner").model_dump(),
+        ],
+    }
+
+
+# ── OpenAI-compatible chat completions ───────────────────────────────────
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatCompletionRequest(BaseModel):
+    model: str = "nanobot-swarm-hierarchical"
+    messages: list[ChatMessage]
+    temperature: float = 0.1
+    max_tokens: int = 4096
+    stream: bool = False
+    metadata: dict = Field(default_factory=dict)
+
+
+class ChatChoice(BaseModel):
+    index: int = 0
+    message: ChatMessage
+    finish_reason: str = "stop"
+
+
+class Usage(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+
+
+class ChatCompletionResponse(BaseModel):
+    id: str
+    object: str = "chat.completion"
+    created: int
+    model: str
+    choices: list[ChatChoice]
+    usage: Usage
+
+
+@router.post("/chat/completions")
+async def chat_completions(request: ChatCompletionRequest):
+    """
+    OpenAI-compatible chat completions endpoint.
+    Nellie sends a message -> swarm decomposes and executes -> returns result.
+
+    The last user message becomes the swarm's goal.
+    System messages provide context/instructions.
+    """
+    # Extract the goal from messages
+    system_context = ""
+    goal = ""
+
+    for msg in request.messages:
+        if msg.role == "system":
+            system_context += msg.content + "\n"
+        elif msg.role == "user":
+            goal = msg.content
+
+    if not goal:
+        raise HTTPException(400, "No user message found in request")
+
+    # Prepend system context to goal if present
+    if system_context.strip():
+        full_goal = f"Context from Nellie:\n{system_context.strip()}\n\nTask:\n{goal}"
+    else:
+        full_goal = goal
+
+    # Determine which swarm to use
+    if request.model in ("nanobot-swarm-hierarchical", "nanobot-swarm"):
+        if _hierarchical_swarm is None:
+            raise HTTPException(503, "Hierarchical swarm not ready")
+        result = await _hierarchical_swarm.run(full_goal, request.metadata)
+    elif request.model == "nanobot-swarm-flat":
+        if _flat_swarm is None:
+            raise HTTPException(503, "Flat swarm not ready")
+        result = await _flat_swarm.run(full_goal, request.metadata)
+    else:
+        raise HTTPException(400, f"Unknown model: {request.model}")
+
+    if not result.get("success"):
+        error_msg = result.get("error", "Swarm execution failed")
+        # Return error as assistant message rather than HTTP error
+        # so Nellie can handle it gracefully
+        response_content = f"[SWARM ERROR] {error_msg}"
+    else:
+        response_content = result["final_answer"]
+
+    # Build response metadata for Nellie
+    session_id = result.get("session_id", "unknown")
+    summary = result.get("session_summary", {})
+
+    # Append execution metadata as a footer
+    meta_footer = (
+        f"\n\n---\n"
+        f"[Swarm Session: {session_id}] "
+        f"[Tasks: {summary.get('total_tasks', 0)}] "
+        f"[Success Rate: {summary.get('success_rate', 0)}%] "
+        f"[Tokens: {summary.get('total_tokens', 0)}]"
+    )
+
+    if request.stream:
+        return StreamingResponse(
+            _stream_response(
+                response_content + meta_footer,
+                request.model,
+                session_id,
+            ),
+            media_type="text/event-stream",
+        )
+
+    return ChatCompletionResponse(
+        id=f"chatcmpl-swarm-{session_id[:8]}",
+        created=int(time.time()),
+        model=request.model,
+        choices=[
+            ChatChoice(
+                message=ChatMessage(
+                    role="assistant",
+                    content=response_content + meta_footer,
+                ),
+            )
+        ],
+        usage=Usage(
+            prompt_tokens=len(full_goal.split()),
+            completion_tokens=len(response_content.split()),
+            total_tokens=summary.get("total_tokens", 0),
+        ),
+    )
+
+
+async def _stream_response(
+    content: str,
+    model: str,
+    session_id: str,
+) -> AsyncIterator[str]:
+    """Stream the response in SSE format (OpenAI-compatible)."""
+    chunk_id = f"chatcmpl-swarm-{session_id[:8]}"
+
+    # Stream in word-sized chunks for realistic streaming
+    words = content.split()
+    for i, word in enumerate(words):
+        token = word + (" " if i < len(words) - 1 else "")
+        chunk = {
+            "id": chunk_id,
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {"content": token},
+                    "finish_reason": None,
+                }
+            ],
+        }
+        yield f"data: {json.dumps(chunk)}\n\n"
+        await asyncio.sleep(0.01)
+
+    # Final chunk
+    final = {
+        "id": chunk_id,
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+    }
+    yield f"data: {json.dumps(final)}\n\n"
+    yield "data: [DONE]\n\n"
+
+
+# ── Nellie-specific management endpoints ─────────────────────────────────
+
+
+class NellieTaskRequest(BaseModel):
+    """Nellie's direct task dispatch format."""
+    task: str
+    team: str = "auto"  # auto, coder, researcher, analyst, validator, executor
+    priority: int = 5
+    context: dict = Field(default_factory=dict)
+    callback_url: str | None = None
+
+
+class NellieTaskResponse(BaseModel):
+    session_id: str
+    status: str
+    result: str | None = None
+    team_used: str | None = None
+    tasks_completed: int = 0
+    tokens_used: int = 0
+
+
+@router.post("/nellie/dispatch", response_model=NellieTaskResponse)
+async def nellie_dispatch(request: NellieTaskRequest):
+    """
+    Nellie's direct dispatch endpoint — she can specify which team to use.
+    This bypasses the Queen and sends directly to an L1 team.
+    """
+    if _hierarchical_swarm is None:
+        raise HTTPException(503, "Swarm not ready")
+
+    # For 'auto' mode, use full hierarchical swarm
+    if request.team == "auto":
+        result = await _hierarchical_swarm.run(
+            request.task,
+            {"nellie_priority": request.priority, **request.context},
+        )
+        return NellieTaskResponse(
+            session_id=result.get("session_id", ""),
+            status="complete" if result.get("success") else "failed",
+            result=result.get("final_answer"),
+            team_used="hierarchical",
+            tasks_completed=len(result.get("l1_results", [])),
+            tokens_used=result.get("session_summary", {}).get("total_tokens", 0),
+        )
+
+    # For specific team, use flat swarm with role-focused prompt
+    if _flat_swarm is None:
+        raise HTTPException(503, "Flat swarm not ready")
+
+    team_prefixed_goal = (
+        f"[TEAM: {request.team.upper()}] "
+        f"Priority: {request.priority}/10\n\n"
+        f"{request.task}"
+    )
+    result = await _flat_swarm.run(team_prefixed_goal, request.context)
+
+    return NellieTaskResponse(
+        session_id=result.get("session_id", ""),
+        status="complete" if result.get("success") else "failed",
+        result=result.get("final_answer"),
+        team_used=request.team,
+        tasks_completed=len(result.get("subtask_results", [])),
+        tokens_used=result.get("session_summary", {}).get("total_tokens", 0),
+    )
+
+
+@router.get("/nellie/sessions")
+async def nellie_sessions():
+    """Nellie queries her swarm session history."""
+    sessions = await _state_manager.list_recent_sessions(20)
+    return {
+        "managed_by": "nellie",
+        "total_sessions": len(sessions),
+        "sessions": [
+            {
+                "id": s["session_id"],
+                "goal": s.get("goal", "")[:100],
+                "status": s.get("status"),
+                "success": s.get("success"),
+                "created": s.get("created_at"),
+            }
+            for s in sessions
+        ],
+    }
+
+
+@router.get("/nellie/health")
+async def nellie_health():
+    """Nellie checks her nanobot swarm health."""
+    health = await _state_manager.get_swarm_health()
+    return {
+        "swarm_status": "operational" if health["active_agents"] >= 0 else "degraded",
+        "active_nanobots": health["active_agents"],
+        "role_distribution": health["agent_breakdown"],
+        "failed_queue": health["failed_queue_depth"],
+        "redis_memory_mb": health["redis_memory_used_mb"],
+    }
