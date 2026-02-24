@@ -18,12 +18,13 @@ This allows Nellie to manage nanobot teams under her supervision.
 
 import asyncio
 import json
+import os
 import time
 import uuid
 import structlog
 from typing import AsyncIterator
 
-from fastapi import APIRouter, HTTPException, Header, Request
+from fastapi import APIRouter, HTTPException, Header, Request, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -33,6 +34,23 @@ from nanobot.state.swarm_state import SwarmStateManager
 from nanobot.integrations.nellie_memory_bridge import memory_bridge
 
 log = structlog.get_logger()
+
+OPENCLAW_API_KEY = os.getenv(
+    "OPENCLAW_API_KEY", "nq-openclaw-0oQB26o-WlboQ3CovKhAm-aPbCnui_jeY11XmZy-i1g"
+)
+
+
+def verify_openclaw_key(authorization: str = Header(None)):
+    """Verify Bearer token for OpenClaw routes."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid Authorization format. Use: Bearer <key>")
+    if parts[1] != OPENCLAW_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    return parts[1]
+
 
 router = APIRouter(prefix="/v1", tags=["OpenAI-Compatible"])
 
@@ -74,7 +92,7 @@ class ModelInfo(BaseModel):
 
 
 @router.get("/models")
-async def list_models():
+async def list_models(_: str = Depends(verify_openclaw_key)):
     """Return available models — allows Nellie to discover the swarm."""
     return {
         "object": "list",
@@ -125,7 +143,7 @@ class ChatCompletionResponse(BaseModel):
 
 
 @router.post("/chat/completions")
-async def chat_completions(request: ChatCompletionRequest):
+async def chat_completions(request: ChatCompletionRequest, _: str = Depends(verify_openclaw_key)):
     """
     OpenAI-compatible chat completions endpoint.
     Nellie sends a message -> swarm decomposes and executes -> returns result.
@@ -297,7 +315,7 @@ class NellieTaskResponse(BaseModel):
 
 
 @router.post("/nellie/dispatch", response_model=NellieTaskResponse)
-async def nellie_dispatch(request: NellieTaskRequest):
+async def nellie_dispatch(request: NellieTaskRequest, _: str = Depends(verify_openclaw_key)):
     """
     Nellie's direct dispatch endpoint — she can specify which team to use.
     This bypasses the Queen and sends directly to an L1 team.
@@ -358,7 +376,7 @@ async def nellie_dispatch(request: NellieTaskRequest):
 
 
 @router.get("/nellie/sessions")
-async def nellie_sessions():
+async def nellie_sessions(_: str = Depends(verify_openclaw_key)):
     """Nellie queries her swarm session history."""
     sessions = await _state_manager.list_recent_sessions(20)
     return {
@@ -378,7 +396,7 @@ async def nellie_sessions():
 
 
 @router.get("/nellie/health")
-async def nellie_health():
+async def nellie_health(_: str = Depends(verify_openclaw_key)):
     """Nellie checks her nanobot swarm health."""
     health = await _state_manager.get_swarm_health()
     bridge_status = {}
@@ -398,7 +416,7 @@ async def nellie_health():
 
 
 @router.get("/nellie/memory")
-async def nellie_memory():
+async def nellie_memory(_: str = Depends(verify_openclaw_key)):
     """Query Nellie's persistent memory and swarm history."""
     try:
         recent_results = await memory_bridge.get_recent_swarm_history(20)
@@ -414,7 +432,7 @@ async def nellie_memory():
 
 
 @router.post("/nellie/memory/sync")
-async def nellie_memory_sync(request: Request):
+async def nellie_memory_sync(request: Request, _: str = Depends(verify_openclaw_key)):
     """Force sync workspace artifacts from a swarm session."""
     body = await request.json()
     session_id = body.get("session_id")
