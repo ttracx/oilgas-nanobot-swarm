@@ -230,7 +230,7 @@ Provide the final synthesized answer:""",
         await swarm_state.complete_session(session_id, final_answer, synth_result.success)
         summary = await journal.get_session_summary()
 
-        log.info("swarm_complete", session_id=session_id, **summary)
+        log.info("swarm_complete", **{k: v for k, v in summary.items() if k != "session_id"}, session_id=session_id)
 
         return {
             "success": True,

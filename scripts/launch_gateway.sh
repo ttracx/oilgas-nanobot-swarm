@@ -11,7 +11,7 @@ export VLLM_URL="http://localhost:8000/v1"
 export GATEWAY_API_KEY="nq-gateway-key"
 export REDIS_HOST="127.0.0.1"
 export REDIS_PORT="6379"
-export REDIS_PASSWORD="nq-redis-nanobot-2025"
+export REDIS_PASSWORD=""
 
 echo "Launching Nanobot Swarm Gateway on :8100..."
 echo "vLLM:    $VLLM_URL"

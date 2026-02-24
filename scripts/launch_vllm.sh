@@ -8,7 +8,11 @@ source ~/vllm-nanobot-env/bin/activate
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
 export CUDA_VISIBLE_DEVICES=0
 
-MODEL="TeichAI/GLM-4.7-Flash-Claude-Opus-4.5-High-Reasoning-Distill"
+# Default: Qwen2.5-7B-Instruct-AWQ (4-bit, ~4.5GB — fits 16GB VRAM with room for KV cache)
+# Override with NANOBOT_MODEL env var for other models
+# For 24GB+ VRAM: NANOBOT_MODEL=meta-llama/Llama-3.1-8B-Instruct
+# For 48GB+ VRAM: NANOBOT_MODEL=TeichAI/GLM-4.7-Flash-Claude-Opus-4.5-High-Reasoning-Distill
+MODEL="${NANOBOT_MODEL:-Qwen/Qwen2.5-7B-Instruct-AWQ}"
 HOST="0.0.0.0"
 PORT="8000"
 
@@ -25,13 +29,25 @@ fi
 echo "Launching vLLM server on :${PORT}..."
 echo "Model: $MODEL"
 
+# Detect if model is quantized
+QUANT_ARGS=""
+DTYPE_ARG="--dtype bfloat16"
+if [[ "$MODEL" == *"AWQ"* ]] || [[ "$MODEL" == *"awq"* ]]; then
+    QUANT_ARGS="--quantization awq"
+    DTYPE_ARG="--dtype float16"
+elif [[ "$MODEL" == *"GPTQ"* ]] || [[ "$MODEL" == *"gptq"* ]]; then
+    QUANT_ARGS="--quantization gptq"
+    DTYPE_ARG="--dtype float16"
+fi
+
 python -m vllm.entrypoints.openai.api_server \
     --model "$MODEL" \
     --host "$HOST" \
     --port "$PORT" \
     --api-key "$API_KEY" \
-    --dtype bfloat16 \
-    --gpu-memory-utilization 0.85 \
+    $DTYPE_ARG \
+    $QUANT_ARGS \
+    --gpu-memory-utilization 0.90 \
     --max-model-len 8192 \
     --max-num-seqs 32 \
     --max-num-batched-tokens 16384 \
@@ -40,4 +56,5 @@ python -m vllm.entrypoints.openai.api_server \
     --disable-log-requests \
     --served-model-name "nanobot-reasoner" \
     --trust-remote-code \
+    --enforce-eager \
     2>&1 | tee ~/vllm_server.log

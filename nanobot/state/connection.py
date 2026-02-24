@@ -17,7 +17,7 @@ _lock = asyncio.Lock()
 
 REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "nq-redis-nanobot-2025")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 REDIS_DB = int(os.getenv("REDIS_DB", "0"))
 
 NS = {
@@ -39,7 +39,7 @@ async def get_pool() -> ConnectionPool:
             _pool = ConnectionPool(
                 host=REDIS_HOST,
                 port=REDIS_PORT,
-                password=REDIS_PASSWORD,
+                password=REDIS_PASSWORD or None,
                 db=REDIS_DB,
                 max_connections=50,
                 decode_responses=True,
