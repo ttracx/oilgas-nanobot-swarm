@@ -95,19 +95,27 @@ class SubSwarm:
             tool_registry=self.registry,
         )
 
+    @staticmethod
+    def _truncate(text: str, max_chars: int = 6000) -> str:
+        """Truncate text to fit within context window budget."""
+        if len(text) <= max_chars:
+            return text
+        return text[:max_chars] + f"\n\n[... truncated {len(text) - max_chars} chars]"
+
     def _build_sub_task_content(
         self,
         role: L2Role,
         original_task: str,
         stage_inputs: dict[L2Role, str],
     ) -> str:
-        content_parts = [f"TASK:\n{original_task}"]
+        content_parts = [f"TASK:\n{self._truncate(original_task, 2000)}"]
 
         if stage_inputs:
             relevant = {r: o for r, o in stage_inputs.items() if r != role}
             if relevant:
                 ctx = "\n\n".join([
-                    f"### Output from {r.value}:\n{o}" for r, o in relevant.items()
+                    f"### Output from {r.value}:\n{self._truncate(o, 4000)}"
+                    for r, o in relevant.items()
                 ])
                 content_parts.append(f"PRIOR STAGE OUTPUTS:\n{ctx}")
 
@@ -124,9 +132,9 @@ class SubSwarm:
         if role in injections:
             dep_role, label = injections[role]
             if dep_role in stage_inputs:
-                content_parts.append(f"{label}:\n{stage_inputs[dep_role]}")
+                content_parts.append(f"{label}:\n{self._truncate(stage_inputs[dep_role], 5000)}")
         elif role == L2Role.SUMMARIZER and stage_inputs:
-            all_prior = "\n\n".join(stage_inputs.values())
+            all_prior = "\n\n".join(self._truncate(v, 3000) for v in stage_inputs.values())
             content_parts.append(f"CONTENT TO SUMMARIZE:\n{all_prior}")
 
         return "\n\n".join(content_parts)

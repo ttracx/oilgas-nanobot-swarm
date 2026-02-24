@@ -74,7 +74,7 @@ class L1Agent:
                 role=AgentRole(role.value),
                 name=f"{role.value}-lead-{uuid.uuid4().hex[:6]}",
                 system_prompt=L1_SYSTEM_PROMPTS[role],
-                max_tokens=2048,
+                max_tokens=3072,
                 temperature=0.05,
             ),
             session_id=session_id,
@@ -132,11 +132,27 @@ class L1Agent:
             sub_result = await self.sub_swarm.execute(enriched_task)
 
             # Phase 3: L1 reviews sub-swarm output
+            # Truncate sub-swarm output to avoid overflowing context window.
+            # Reserve ~2K tokens for system prompt + task + review instructions,
+            # ~3K tokens for response, leaving ~3K tokens for sub-swarm content.
+            raw_sub_output = sub_result["final_output"]
+            MAX_REVIEW_INPUT_CHARS = 8000  # ~2K tokens
+            if len(raw_sub_output) > MAX_REVIEW_INPUT_CHARS:
+                truncated_sub_output = (
+                    raw_sub_output[:MAX_REVIEW_INPUT_CHARS]
+                    + f"\n\n[... truncated {len(raw_sub_output) - MAX_REVIEW_INPUT_CHARS} chars]"
+                )
+            else:
+                truncated_sub_output = raw_sub_output
+
+            # Also truncate the original task for the review prompt
+            task_summary = task.content[:1500]
+
             review_task = AgentTask(
                 content=(
                     f"Your sub-swarm has completed the task. Review and enhance their output.\n\n"
-                    f"ORIGINAL TASK:\n{task.content}\n\n"
-                    f"SUB-SWARM OUTPUT:\n{sub_result['final_output']}\n\n"
+                    f"ORIGINAL TASK:\n{task_summary}\n\n"
+                    f"SUB-SWARM OUTPUT:\n{truncated_sub_output}\n\n"
                     f"Your job:\n"
                     f"1. Identify any gaps or issues\n"
                     f"2. Add your L1 expertise layer\n"
@@ -162,15 +178,17 @@ class L1Agent:
                 total_tokens=total_tokens,
             )
 
+            # Use L1 review output if non-empty, otherwise fall back to raw sub-swarm output
+            final_output = final_result.output.strip() if final_result.success else ""
+            if not final_output:
+                log.warning("l1_review_empty_fallback", id=self.id, role=self.role.value)
+                final_output = raw_sub_output
+
             return AgentResult(
                 task_id=task.id,
                 agent_id=self.id,
                 agent_role=AgentRole(self.role.value),
-                output=(
-                    final_result.output
-                    if final_result.success
-                    else sub_result["final_output"]
-                ),
+                output=final_output,
                 success=True,
                 duration_seconds=duration,
                 tokens_used=total_tokens,
