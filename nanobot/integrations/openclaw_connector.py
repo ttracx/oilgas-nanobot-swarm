@@ -8,6 +8,11 @@ Nellie sends tasks to the swarm via:
 2. Direct swarm API for advanced orchestration
 3. WebSocket for real-time status updates
 
+Features:
+- Persistent memory bridge: swarm results auto-persist to NellieNano's HISTORY.md
+- Workspace sync: swarm output artifacts synced to Nellie's workspace
+- Session continuity: cross-session recall via Redis-backed bridge store
+
 This allows Nellie to manage nanobot teams under her supervision.
 """
 
@@ -25,6 +30,7 @@ from pydantic import BaseModel, Field
 from nanobot.core.hierarchical_swarm import HierarchicalSwarm
 from nanobot.core.orchestrator import NanobotSwarm
 from nanobot.state.swarm_state import SwarmStateManager
+from nanobot.integrations.nellie_memory_bridge import memory_bridge
 
 log = structlog.get_logger()
 
@@ -36,6 +42,15 @@ _flat_swarm: NanobotSwarm | None = None
 _state_manager = SwarmStateManager()
 
 
+async def _init_bridge() -> None:
+    """Initialize the Nellie memory bridge."""
+    try:
+        await memory_bridge.initialize()
+        log.info("nellie_memory_bridge_initialized")
+    except Exception as e:
+        log.warning("nellie_memory_bridge_init_failed", error=str(e))
+
+
 def set_swarm_instances(
     hierarchical: HierarchicalSwarm,
     flat: NanobotSwarm,
@@ -44,6 +59,8 @@ def set_swarm_instances(
     global _hierarchical_swarm, _flat_swarm
     _hierarchical_swarm = hierarchical
     _flat_swarm = flat
+    # Schedule bridge initialization
+    asyncio.get_event_loop().create_task(_init_bridge())
 
 
 # ── OpenAI-compatible models endpoint ────────────────────────────────────
@@ -129,9 +146,22 @@ async def chat_completions(request: ChatCompletionRequest):
     if not goal:
         raise HTTPException(400, "No user message found in request")
 
-    # Prepend system context to goal if present
+    # Preflight: load Nellie's long-term memory for context
+    nellie_context = ""
+    try:
+        nellie_context = await memory_bridge.load_nellie_context()
+    except Exception as e:
+        log.warning("preflight_memory_load_failed", error=str(e))
+
+    # Prepend system context + Nellie memory to goal
+    context_parts = []
     if system_context.strip():
-        full_goal = f"Context from Nellie:\n{system_context.strip()}\n\nTask:\n{goal}"
+        context_parts.append(f"Context from Nellie:\n{system_context.strip()}")
+    if nellie_context:
+        context_parts.append(nellie_context)
+
+    if context_parts:
+        full_goal = "\n\n".join(context_parts) + f"\n\nTask:\n{goal}"
     else:
         full_goal = goal
 
@@ -146,6 +176,13 @@ async def chat_completions(request: ChatCompletionRequest):
         result = await _flat_swarm.run(full_goal, request.metadata)
     else:
         raise HTTPException(400, f"Unknown model: {request.model}")
+
+    # Auto-persist result to Nellie's memory
+    try:
+        session_id_val = result.get("session_id", "unknown")
+        await memory_bridge.persist_swarm_result(session_id_val, result)
+    except Exception as e:
+        log.warning("result_persist_failed", error=str(e))
 
     if not result.get("success"):
         error_msg = result.get("error", "Swarm execution failed")
@@ -274,6 +311,14 @@ async def nellie_dispatch(request: NellieTaskRequest):
             request.task,
             {"nellie_priority": request.priority, **request.context},
         )
+        # Auto-persist
+        try:
+            await memory_bridge.persist_swarm_result(
+                result.get("session_id", ""), result
+            )
+        except Exception as e:
+            log.warning("dispatch_persist_failed", error=str(e))
+
         return NellieTaskResponse(
             session_id=result.get("session_id", ""),
             status="complete" if result.get("success") else "failed",
@@ -293,6 +338,14 @@ async def nellie_dispatch(request: NellieTaskRequest):
         f"{request.task}"
     )
     result = await _flat_swarm.run(team_prefixed_goal, request.context)
+
+    # Auto-persist
+    try:
+        await memory_bridge.persist_swarm_result(
+            result.get("session_id", ""), result
+        )
+    except Exception as e:
+        log.warning("dispatch_persist_failed", error=str(e))
 
     return NellieTaskResponse(
         session_id=result.get("session_id", ""),
@@ -328,10 +381,61 @@ async def nellie_sessions():
 async def nellie_health():
     """Nellie checks her nanobot swarm health."""
     health = await _state_manager.get_swarm_health()
+    bridge_status = {}
+    try:
+        bridge_status = await memory_bridge.get_bridge_status()
+    except Exception as e:
+        bridge_status = {"status": "error", "error": str(e)}
+
     return {
         "swarm_status": "operational" if health["active_agents"] >= 0 else "degraded",
         "active_nanobots": health["active_agents"],
         "role_distribution": health["agent_breakdown"],
         "failed_queue": health["failed_queue_depth"],
         "redis_memory_mb": health["redis_memory_used_mb"],
+        "memory_bridge": bridge_status,
+    }
+
+
+@router.get("/nellie/memory")
+async def nellie_memory():
+    """Query Nellie's persistent memory and swarm history."""
+    try:
+        recent_results = await memory_bridge.get_recent_swarm_history(20)
+        nellie_context = await memory_bridge.load_nellie_context()
+        bridge_status = await memory_bridge.get_bridge_status()
+        return {
+            "long_term_memory": nellie_context[:2000] if nellie_context else None,
+            "recent_swarm_results": recent_results,
+            "bridge_status": bridge_status,
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Memory query failed: {e}")
+
+
+@router.post("/nellie/memory/sync")
+async def nellie_memory_sync(request: Request):
+    """Force sync workspace artifacts from a swarm session."""
+    body = await request.json()
+    session_id = body.get("session_id")
+    if not session_id:
+        raise HTTPException(400, "session_id required")
+
+    # Get session results from state manager
+    session = await _state_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(404, "Session not found")
+
+    # Persist to memory bridge
+    await memory_bridge.persist_swarm_result(session_id, session)
+
+    # If artifacts provided, sync to workspace
+    artifacts = body.get("artifacts", {})
+    if artifacts:
+        await memory_bridge.sync_workspace(session_id, artifacts)
+
+    return {
+        "synced": True,
+        "session_id": session_id,
+        "artifacts_synced": len(artifacts),
     }

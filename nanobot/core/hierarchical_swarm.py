@@ -227,27 +227,48 @@ class HierarchicalSwarm:
                 session_id, {"completed_tasks": len(completed_outputs)}
             )
 
-        # Queen synthesis
-        synth_queen = self._make_queen(session_id)
-        await synth_queen.initialize()
+        # Queen synthesis — use a dedicated synthesizer prompt (not the planner prompt)
+        synth_agent = NanobotV3(
+            config=AgentConfig(
+                role=AgentRole.ORCHESTRATOR,
+                name="queen-synthesizer",
+                system_prompt=(
+                    "You are the Queen Synthesizer of the NeuralQuantum Nanobot Swarm. "
+                    "Your job is to combine results from multiple domain lead agents into "
+                    "a single comprehensive answer. Do NOT output JSON. Write a clear, "
+                    "well-structured text response that directly answers the original goal."
+                ),
+                max_tokens=4096,
+                temperature=0.1,
+            ),
+            session_id=session_id,
+            vllm_base_url=self.vllm_url,
+            api_key=self.api_key,
+            tool_registry=self.registry,
+        )
+        await synth_agent.initialize()
 
+        # Truncate individual results to avoid context overflow
         results_text = "\n\n".join([
-            f"### {r['l1_role'].upper()} ({r['task_id']}):\n{r['output']}"
+            f"### {r['l1_role'].upper()} ({r['task_id']}):\n{r['output'][:1500]}"
             for r in all_l1_results
             if r["success"]
         ])
+
+        synth_instruction = plan.get(
+            "synthesis_instruction", "Combine all results into a comprehensive answer."
+        )
 
         synth_task = AgentTask(
             content=(
                 f"Original Goal: {goal}\n\n"
                 f"L1 Domain Lead Results:\n{results_text}\n\n"
-                f"Synthesis Instruction: "
-                f"{plan.get('synthesis_instruction', 'Synthesize all results.')}\n\n"
-                f"Produce the final comprehensive answer:"
+                f"Synthesis Instruction: {synth_instruction}\n\n"
+                f"Produce the final comprehensive answer in plain text (NOT JSON):"
             ),
         )
-        synth_result = await synth_queen.execute(synth_task)
-        await synth_queen.shutdown()
+        synth_result = await synth_agent.execute(synth_task)
+        await synth_agent.shutdown()
 
         final_answer = synth_result.output if synth_result.success else "Synthesis failed"
 

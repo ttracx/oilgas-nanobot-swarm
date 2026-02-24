@@ -204,12 +204,29 @@ class NanobotSwarm:
                 session_id, {"completed_tasks": len(completed)}
             )
 
-        # Synthesis
-        synth_queen = self._make_agent(AgentRole.ORCHESTRATOR, session_id)
-        await synth_queen.initialize()
+        # Synthesis — use dedicated synthesizer (not the planner prompt)
+        from nanobot.core.agent_v3 import NanobotV3
+        synth_agent = NanobotV3(
+            config=AgentConfig(
+                role=AgentRole.ORCHESTRATOR,
+                name="synthesizer",
+                system_prompt=(
+                    "You are a Synthesis Agent. Combine the results from multiple specialist "
+                    "agents into a single comprehensive answer. Do NOT output JSON. "
+                    "Write a clear, well-structured text response."
+                ),
+                max_tokens=4096,
+                temperature=0.1,
+            ),
+            session_id=session_id,
+            vllm_base_url=self.vllm_url,
+            api_key=self.api_key,
+            tool_registry=self.registry,
+        )
+        await synth_agent.initialize()
 
         results_text = "\n\n".join([
-            f"### {r['role'].upper()} ({r['task_id']}):\n{r['output']}"
+            f"### {r['role'].upper()} ({r['task_id']}):\n{r['output'][:1500]}"
             for r in all_results
         ])
         synth_task = AgentTask(
@@ -220,10 +237,10 @@ Subtask Results:
 
 Synthesis Instruction: {plan.get('synthesis_instruction', 'Combine all results into a comprehensive final answer.')}
 
-Provide the final synthesized answer:""",
+Produce the final comprehensive answer in plain text (NOT JSON):""",
         )
-        synth_result = await synth_queen.execute(synth_task)
-        await synth_queen.shutdown()
+        synth_result = await synth_agent.execute(synth_task)
+        await synth_agent.shutdown()
 
         final_answer = synth_result.output if synth_result.success else "Synthesis failed"
 
