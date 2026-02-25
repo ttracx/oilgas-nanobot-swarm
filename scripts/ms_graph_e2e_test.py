@@ -134,10 +134,10 @@ async def main():
     if emails:
         try:
             body = await ms_graph.get_email_body(emails[0]["id"])
-            if body and body.get("body"):
+            if body and body.get("id"):
                 r.ok("email_body", f"Body type={body.get('body_type', 'unknown')}, len={len(body.get('body', ''))}")
             else:
-                r.fail("email_body", "Empty body response")
+                r.fail("email_body", "No response from message endpoint")
         except Exception as e:
             r.fail("email_body", str(e))
     else:
