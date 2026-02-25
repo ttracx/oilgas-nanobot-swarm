@@ -25,8 +25,10 @@ from nanobot.scheduler.scheduler import scheduler
 from nanobot.scheduler.agent_teams import get_team
 from nanobot.tools.knowledge_tools import register_knowledge_tools
 from nanobot.tools.msgraph_tools import register_msgraph_tools
+from nanobot.tools.vault_memory_tools import register_vault_memory_tools, set_vector_store as set_memory_vector_store
 from nanobot.tools.base import ToolRegistry
 from nanobot.integrations.microsoft_graph import ms_graph
+from nanobot.integrations.nellie_memory_bridge import memory_bridge
 from nanobot.knowledge.vector_store import VaultVectorStore
 from nanobot.knowledge.file_watcher import VaultFileWatcher
 from nanobot.knowledge.vault import vault
@@ -95,8 +97,6 @@ async def lifespan(app: FastAPI):
         api_key=VLLM_API_KEY,
         max_parallel_agents=8,
     )
-    set_swarm_instances(hierarchical_swarm, flat_swarm)
-
     # Initialize Claude runner if API key is available
     if ANTHROPIC_API_KEY:
         claude_runner = ClaudeTeamRunner()
@@ -138,8 +138,21 @@ async def lifespan(app: FastAPI):
         log.warning("vector_store_init_failed", error=str(e)[:100])
         vector_store = None
 
-    # Expose vector store to knowledge routes
+    # Expose vector store to knowledge routes + memory tools + openclaw connector
     set_vector_store(vector_store)
+    set_memory_vector_store(vector_store)
+    set_swarm_instances(hierarchical_swarm, flat_swarm, claude_runner, vector_store)
+    log.info("openclaw_connector_initialized", claude=claude_runner is not None, vector_store=vector_store is not None)
+
+    # Register vault memory tools (memory_recall, memory_save, memory_context)
+    register_vault_memory_tools(claude_runner.registry if claude_runner else ToolRegistry())
+
+    # Bulk sync vault to Redis for fast cross-session memory retrieval
+    try:
+        synced = await memory_bridge.bulk_sync_vault_to_redis()
+        log.info("vault_redis_sync_complete", entries=synced)
+    except Exception as e:
+        log.warning("vault_redis_sync_failed", error=str(e)[:100])
 
     # Start file watcher for vault changes
     try:

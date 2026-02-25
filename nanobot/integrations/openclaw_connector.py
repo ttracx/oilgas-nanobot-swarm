@@ -30,9 +30,11 @@ from pydantic import BaseModel, Field
 
 from nanobot.core.hierarchical_swarm import HierarchicalSwarm
 from nanobot.core.orchestrator import NanobotSwarm
+from nanobot.core.claude_runner import ClaudeTeamRunner
 from nanobot.state.swarm_state import SwarmStateManager
 from nanobot.integrations.nellie_memory_bridge import memory_bridge
 from nanobot.knowledge.graph_builder import graph_builder
+from nanobot.knowledge.artifact_writer import process_agent_output
 
 log = structlog.get_logger()
 
@@ -58,6 +60,8 @@ router = APIRouter(prefix="/v1", tags=["OpenAI-Compatible"])
 # Will be set during app startup
 _hierarchical_swarm: HierarchicalSwarm | None = None
 _flat_swarm: NanobotSwarm | None = None
+_claude_runner: ClaudeTeamRunner | None = None
+_vector_store = None
 _state_manager = SwarmStateManager()
 
 
@@ -73,11 +77,15 @@ async def _init_bridge() -> None:
 def set_swarm_instances(
     hierarchical: HierarchicalSwarm,
     flat: NanobotSwarm,
+    claude_runner: ClaudeTeamRunner | None = None,
+    vector_store=None,
 ) -> None:
     """Called during gateway startup to inject swarm instances."""
-    global _hierarchical_swarm, _flat_swarm
+    global _hierarchical_swarm, _flat_swarm, _claude_runner, _vector_store
     _hierarchical_swarm = hierarchical
     _flat_swarm = flat
+    _claude_runner = claude_runner
+    _vector_store = vector_store
     # Schedule bridge initialization
     asyncio.get_event_loop().create_task(_init_bridge())
 
@@ -95,14 +103,15 @@ class ModelInfo(BaseModel):
 @router.get("/models")
 async def list_models(_: str = Depends(verify_openclaw_key)):
     """Return available models — allows Nellie to discover the swarm."""
-    return {
-        "object": "list",
-        "data": [
-            ModelInfo(id="nanobot-swarm-hierarchical").model_dump(),
-            ModelInfo(id="nanobot-swarm-flat").model_dump(),
-            ModelInfo(id="nanobot-reasoner").model_dump(),
-        ],
-    }
+    models = [
+        ModelInfo(id="nanobot-swarm-hierarchical").model_dump(),
+        ModelInfo(id="nanobot-swarm-flat").model_dump(),
+        ModelInfo(id="nanobot-reasoner").model_dump(),
+        ModelInfo(id="nanobot-nellie-memory").model_dump(),
+    ]
+    if _claude_runner:
+        models.append(ModelInfo(id="nanobot-claude").model_dump())
+    return {"object": "list", "data": models}
 
 
 # ── OpenAI-compatible chat completions ───────────────────────────────────
@@ -143,6 +152,40 @@ class ChatCompletionResponse(BaseModel):
     usage: Usage
 
 
+def _build_vault_context(goal: str, max_tokens: int = 1500) -> str:
+    """Build vault knowledge context for a request.
+
+    Combines:
+    1. Graph builder's daily context (today's note + recent entities)
+    2. Vector semantic search results relevant to the goal
+    """
+    parts: list[str] = []
+
+    # 1. Graph context (daily note + recently updated notes)
+    try:
+        graph_ctx = graph_builder.load_graph_context(token_budget=max_tokens // 2)
+        if graph_ctx and graph_ctx != "(empty vault)":
+            parts.append(graph_ctx)
+    except Exception as e:
+        log.warning("vault_context_graph_failed", error=str(e))
+
+    # 2. Vector semantic search on the goal
+    if _vector_store and goal:
+        try:
+            results = _vector_store.hybrid_search(goal, top_k=5)
+            if results:
+                snippets = []
+                for r in results:
+                    if r.score > 0.15:  # Only include relevant results
+                        snippets.append(f"- **{r.title}** ({r.entity_type}): {r.snippet[:200]}")
+                if snippets:
+                    parts.append("## Relevant Knowledge\n" + "\n".join(snippets))
+        except Exception as e:
+            log.warning("vault_context_vector_failed", error=str(e))
+
+    return "\n\n---\n\n".join(parts) if parts else ""
+
+
 @router.post("/chat/completions")
 async def chat_completions(request: ChatCompletionRequest, _: str = Depends(verify_openclaw_key)):
     """
@@ -151,6 +194,12 @@ async def chat_completions(request: ChatCompletionRequest, _: str = Depends(veri
 
     The last user message becomes the swarm's goal.
     System messages provide context/instructions.
+
+    Models:
+    - nanobot-swarm-hierarchical: 3-tier swarm decomposition
+    - nanobot-swarm-flat: simple parallel swarm
+    - nanobot-nellie-memory: memory-aware — injects vault context, extracts + saves knowledge
+    - nanobot-claude: routes to Claude agent with full tool access
     """
     # Extract the goal from messages
     system_context = ""
@@ -172,54 +221,102 @@ async def chat_completions(request: ChatCompletionRequest, _: str = Depends(veri
     except Exception as e:
         log.warning("preflight_memory_load_failed", error=str(e))
 
-    # Prepend system context + Nellie memory to goal
+    # Load vault knowledge context (entities, relationships, daily notes)
+    vault_context = ""
+    is_memory_model = request.model in ("nanobot-nellie-memory", "nanobot-claude")
+    try:
+        vault_context = _build_vault_context(goal, max_tokens=2000 if is_memory_model else 1000)
+    except Exception as e:
+        log.warning("vault_context_build_failed", error=str(e))
+
+    # Prepend system context + Nellie memory + vault knowledge to goal
     context_parts = []
     if system_context.strip():
         context_parts.append(f"Context from Nellie:\n{system_context.strip()}")
     if nellie_context:
         context_parts.append(nellie_context)
+    if vault_context:
+        context_parts.append(f"## Knowledge Vault\n{vault_context}")
 
     if context_parts:
         full_goal = "\n\n".join(context_parts) + f"\n\nTask:\n{goal}"
     else:
         full_goal = goal
 
-    # Determine which swarm to use
-    if request.model in ("nanobot-swarm-hierarchical", "nanobot-swarm"):
+    # For memory model, add instruction to save new knowledge
+    if is_memory_model:
+        full_goal += (
+            "\n\n---\n"
+            "IMPORTANT: After completing the task, identify any new facts, "
+            "people, decisions, or relationships learned. Emit them as graph updates "
+            "using <graph_update path=\"category/entity-name.md\">content</graph_update> tags "
+            "so they are saved to long-term memory for future sessions."
+        )
+
+    # Route to the appropriate backend
+    if request.model == "nanobot-claude":
+        if not _claude_runner:
+            raise HTTPException(503, "Claude runner not available — set ANTHROPIC_API_KEY")
+        result = await _claude_runner.run(full_goal, mode="flat", context=request.metadata)
+    elif request.model in ("nanobot-swarm-hierarchical", "nanobot-swarm"):
         if _hierarchical_swarm is None:
             raise HTTPException(503, "Hierarchical swarm not ready")
         result = await _hierarchical_swarm.run(full_goal, request.metadata)
-    elif request.model == "nanobot-swarm-flat":
-        if _flat_swarm is None:
+    elif request.model in ("nanobot-swarm-flat", "nanobot-nellie-memory"):
+        if request.model == "nanobot-nellie-memory" and _claude_runner:
+            # Memory model prefers Claude when available (better at tool use)
+            result = await _claude_runner.run(full_goal, mode="flat", context=request.metadata)
+        elif _flat_swarm is not None:
+            result = await _flat_swarm.run(full_goal, request.metadata)
+        else:
             raise HTTPException(503, "Flat swarm not ready")
-        result = await _flat_swarm.run(full_goal, request.metadata)
     else:
         raise HTTPException(400, f"Unknown model: {request.model}")
 
-    # Auto-persist result to Nellie's memory
+    # Auto-persist result to Nellie's memory bridge (HISTORY.md + Redis)
     try:
         session_id_val = result.get("session_id", "unknown")
         await memory_bridge.persist_swarm_result(session_id_val, result)
     except Exception as e:
         log.warning("result_persist_failed", error=str(e))
 
-    # Notify graph builder of swarm completion for knowledge extraction
+    # Extract artifacts and graph updates from the response → write to vault
+    final_answer = result.get("final_answer", "")
+    extraction_summary = ""
+    try:
+        extraction = process_agent_output(
+            final_answer,
+            agent_id=f"openclaw-{request.model}",
+        )
+        if extraction.artifacts_written > 0 or extraction.graph_updates_applied > 0:
+            extraction_summary = (
+                f" [Memory: +{extraction.artifacts_written} artifacts, "
+                f"+{extraction.graph_updates_applied} knowledge updates]"
+            )
+            log.info(
+                "openclaw_memory_updated",
+                model=request.model,
+                artifacts=extraction.artifacts_written,
+                graph_updates=extraction.graph_updates_applied,
+            )
+    except Exception as e:
+        log.warning("artifact_extraction_failed", error=str(e))
+
+    # Notify graph builder of swarm completion for entity extraction
     try:
         await graph_builder.events.emit("swarm_complete", {
             "session_id": result.get("session_id", ""),
             "goal": goal,
-            "final_answer": result.get("final_answer", ""),
+            "final_answer": final_answer,
         })
     except Exception as e:
         log.warning("graph_builder_notify_failed", error=str(e))
 
     if not result.get("success"):
         error_msg = result.get("error", "Swarm execution failed")
-        # Return error as assistant message rather than HTTP error
-        # so Nellie can handle it gracefully
         response_content = f"[SWARM ERROR] {error_msg}"
     else:
-        response_content = result["final_answer"]
+        response_content = final_answer
 
     # Build response metadata for Nellie
     session_id = result.get("session_id", "unknown")
@@ -232,6 +329,7 @@ async def chat_completions(request: ChatCompletionRequest, _: str = Depends(veri
         f"[Tasks: {summary.get('total_tasks', 0)}] "
         f"[Success Rate: {summary.get('success_rate', 0)}%] "
         f"[Tokens: {summary.get('total_tokens', 0)}]"
+        f"{extraction_summary}"
     )
 
     if request.stream:
@@ -428,18 +526,152 @@ async def nellie_health(_: str = Depends(verify_openclaw_key)):
 
 @router.get("/nellie/memory")
 async def nellie_memory(_: str = Depends(verify_openclaw_key)):
-    """Query Nellie's persistent memory and swarm history."""
+    """Query Nellie's persistent memory — vault knowledge + swarm history + Redis state."""
     try:
         recent_results = await memory_bridge.get_recent_swarm_history(20)
         nellie_context = await memory_bridge.load_nellie_context()
         bridge_status = await memory_bridge.get_bridge_status()
+        vault_ctx = graph_builder.load_graph_context(token_budget=1500)
+        vault_stats = await memory_bridge.get_vault_stats()
+
         return {
             "long_term_memory": nellie_context[:2000] if nellie_context else None,
+            "vault_context": vault_ctx if vault_ctx != "(empty vault)" else None,
+            "vault_stats": vault_stats,
             "recent_swarm_results": recent_results,
             "bridge_status": bridge_status,
         }
     except Exception as e:
         raise HTTPException(500, f"Memory query failed: {e}")
+
+
+class MemorySearchRequest(BaseModel):
+    query: str
+    category: str | None = None
+    max_results: int = 10
+
+
+@router.post("/nellie/memory/search")
+async def nellie_memory_search(request: MemorySearchRequest, _: str = Depends(verify_openclaw_key)):
+    """Semantic search across Nellie's knowledge vault — combines vector + graph search."""
+    results = []
+
+    # Vector semantic search
+    if _vector_store:
+        try:
+            vector_results = _vector_store.hybrid_search(
+                request.query, top_k=request.max_results,
+                type_filter=request.category,
+            )
+            for r in vector_results:
+                results.append({
+                    "source": "semantic",
+                    "score": r.score,
+                    "title": r.title,
+                    "type": r.entity_type,
+                    "path": r.path,
+                    "tags": r.tags,
+                    "snippet": r.snippet,
+                })
+        except Exception as e:
+            log.warning("memory_search_vector_failed", error=str(e))
+
+    # Graph keyword search
+    try:
+        from nanobot.knowledge.vault import vault
+        graph_results = vault.search(request.query, category=request.category, max_results=request.max_results)
+        seen = {r["path"] for r in results}
+        for gr in graph_results:
+            path = gr.get("path", "")
+            if path not in seen:
+                results.append({
+                    "source": "graph",
+                    "score": 0.5,
+                    "title": gr.get("name", ""),
+                    "type": gr.get("category", ""),
+                    "path": path,
+                    "tags": gr.get("tags", []),
+                    "snippet": gr.get("content", "")[:300],
+                })
+    except Exception as e:
+        log.warning("memory_search_graph_failed", error=str(e))
+
+    # Also search Redis bridge for recent swarm results
+    try:
+        redis_results = await memory_bridge.search_swarm_history(request.query)
+        for rr in redis_results:
+            results.append({
+                "source": "swarm_history",
+                "score": rr.get("relevance", 0.3),
+                "title": f"Swarm: {rr.get('goal', '')[:60]}",
+                "type": "swarm_session",
+                "path": f"swarm:{rr.get('session_id', '')[:12]}",
+                "tags": [],
+                "snippet": rr.get("final_answer", "")[:300],
+            })
+    except Exception as e:
+        log.warning("memory_search_redis_failed", error=str(e))
+
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return {
+        "query": request.query,
+        "results": results[:request.max_results],
+        "count": len(results),
+    }
+
+
+class MemorySaveRequest(BaseModel):
+    category: str
+    name: str
+    content: str
+    backlinks: list[str] = Field(default_factory=list)
+    confidence: float = 0.85
+
+
+@router.post("/nellie/memory/save")
+async def nellie_memory_save(request: MemorySaveRequest, _: str = Depends(verify_openclaw_key)):
+    """Save knowledge directly to Nellie's vault and sync to Redis."""
+    from nanobot.knowledge.vault import vault
+
+    existing = vault.read_note(request.category, request.name)
+    if existing:
+        vault.update_note(
+            request.category, request.name,
+            append_content=request.content,
+            new_backlinks=request.backlinks or None,
+            new_confidence=request.confidence,
+        )
+        action = "updated"
+    else:
+        vault.create_note(
+            request.category, request.name, request.content,
+            backlinks=request.backlinks or None,
+            confidence=request.confidence,
+        )
+        action = "created"
+
+    # Sync to Redis for cross-session access
+    try:
+        await memory_bridge.sync_vault_entry(request.category, request.name, request.content)
+    except Exception as e:
+        log.warning("memory_save_redis_sync_failed", error=str(e))
+
+    # Update vector index
+    if _vector_store:
+        try:
+            from nanobot.knowledge.vault import _slugify
+            note_path = vault.root / request.category / f"{_slugify(request.name)}.md"
+            if note_path.exists():
+                _vector_store.index_note(str(note_path))
+        except Exception as e:
+            log.warning("memory_save_vector_failed", error=str(e))
+
+    return {
+        "action": action,
+        "category": request.category,
+        "name": request.name,
+        "backlinks": request.backlinks,
+    }
 
 
 @router.post("/nellie/memory/sync")

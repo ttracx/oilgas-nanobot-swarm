@@ -160,6 +160,106 @@ class NellieMemoryBridge:
         await redis.set(f"{BRIDGE_NS}sync_cursor", cursor)
         self._last_sync_cursor = cursor
 
+    async def sync_vault_entry(self, category: str, name: str, content: str) -> None:
+        """Sync a vault entity to Redis for fast cross-session retrieval.
+
+        Stores entity metadata in a Redis hash and adds to a searchable index.
+        This allows memory_search to find vault entities without hitting disk.
+        """
+        redis = await get_redis()
+        key = f"{BRIDGE_NS}vault:{category}:{name}"
+        await redis.hset(key, mapping={
+            "category": category,
+            "name": name,
+            "content": content[:5000],
+            "updated_at": time.time(),
+        })
+        await redis.expire(key, 60 * 60 * 24 * 30)  # 30 day TTL
+
+        # Add to category index
+        await redis.sadd(f"{BRIDGE_NS}vault_index:{category}", name)
+        # Add to global search index
+        await redis.zadd(f"{BRIDGE_NS}vault_recent", {f"{category}:{name}": time.time()})
+        await redis.zremrangebyrank(f"{BRIDGE_NS}vault_recent", 0, -1001)  # Keep last 1000
+
+        log.info("vault_entry_synced_to_redis", category=category, name=name)
+
+    async def search_swarm_history(self, query: str, max_results: int = 5) -> list[dict]:
+        """Search Redis-backed swarm history for results matching a query.
+
+        Simple keyword matching against goals and final answers.
+        Returns results with a relevance score based on keyword overlap.
+        """
+        redis = await get_redis()
+        session_ids = await redis.lrange(f"{BRIDGE_NS}results_index", 0, 99)
+        query_words = set(query.lower().split())
+        scored: list[tuple[float, dict]] = []
+
+        for sid in session_ids:
+            raw = await redis.get(f"{BRIDGE_NS}result:{sid}")
+            if not raw:
+                continue
+            record = json.loads(raw)
+            # Score by keyword overlap in goal + answer
+            text = f"{record.get('goal', '')} {record.get('final_answer', '')}".lower()
+            text_words = set(text.split())
+            overlap = len(query_words & text_words)
+            if overlap > 0:
+                relevance = overlap / max(1, len(query_words))
+                record["relevance"] = round(relevance, 3)
+                scored.append((relevance, record))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [r for _, r in scored[:max_results]]
+
+    async def get_vault_stats(self) -> dict:
+        """Get vault statistics from Redis + disk."""
+        redis = await get_redis()
+
+        # Count entities synced to Redis
+        redis_categories = await redis.keys(f"{BRIDGE_NS}vault_index:*")
+        redis_entity_count = 0
+        for cat_key in redis_categories:
+            redis_entity_count += await redis.scard(cat_key)
+
+        recent_count = await redis.zcard(f"{BRIDGE_NS}vault_recent")
+
+        # Disk stats from vault
+        from nanobot.knowledge.vault import vault
+        disk_stats = vault.get_stats()
+
+        return {
+            "disk": disk_stats,
+            "redis_synced_entities": redis_entity_count,
+            "redis_recent_entries": recent_count,
+            "redis_categories": len(redis_categories),
+        }
+
+    async def bulk_sync_vault_to_redis(self) -> int:
+        """Bulk sync all vault entities to Redis for fast retrieval.
+
+        Call this at startup or after a rebuild to populate the Redis cache.
+        """
+        from nanobot.knowledge.vault import vault
+
+        synced = 0
+        for category in ["people", "companies", "projects", "topics",
+                         "decisions", "commitments", "meetings"]:
+            cat_dir = vault.root / category
+            if not cat_dir.exists():
+                continue
+            for md_file in cat_dir.glob("*.md"):
+                try:
+                    content = md_file.read_text(encoding="utf-8")
+                    name = md_file.stem.replace("-", " ").title()
+                    await self.sync_vault_entry(category, name, content[:3000])
+                    synced += 1
+                except Exception as e:
+                    log.warning("bulk_sync_entry_failed", file=str(md_file), error=str(e))
+
+        log.info("vault_bulk_synced_to_redis", entries=synced)
+        return synced
+
     async def get_bridge_status(self) -> dict:
         """Get bridge health and sync status."""
         redis = await get_redis()
@@ -172,12 +272,20 @@ class NellieMemoryBridge:
         if history_exists:
             history_size = NELLIE_HISTORY_FILE.stat().st_size
 
+        # Vault Redis sync stats
+        redis_vault_count = 0
+        try:
+            redis_vault_count = await redis.zcard(f"{BRIDGE_NS}vault_recent")
+        except Exception:
+            pass
+
         return {
             "status": "operational",
             "nellie_memory_exists": memory_exists,
             "nellie_history_exists": history_exists,
             "nellie_history_size_kb": round(history_size / 1024, 1),
             "persisted_results": result_count,
+            "redis_vault_entities": redis_vault_count,
             "sync_cursor": self._last_sync_cursor,
             "workspace_path": str(NELLIE_WORKSPACE),
         }
