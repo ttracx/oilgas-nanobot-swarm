@@ -6,6 +6,7 @@ Tool use (v2) + persistent memory + task journaling + swarm registry.
 import time
 import uuid
 import structlog
+import httpx
 from openai import AsyncOpenAI
 
 from nanobot.core.agent import AgentConfig, AgentTask, AgentResult, AgentStatus
@@ -46,7 +47,21 @@ class NanobotV3:
         self.client = AsyncOpenAI(
             base_url=vllm_base_url,
             api_key=api_key,
-            timeout=config.timeout_seconds,
+            timeout=httpx.Timeout(
+                connect=30.0,
+                read=max(config.timeout_seconds, 600.0),
+                write=60.0,
+                pool=60.0,
+            ),
+            http_client=httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    connect=30.0,
+                    read=max(config.timeout_seconds, 600.0),
+                    write=60.0,
+                    pool=60.0,
+                ),
+                http2=True,
+            ),
         )
 
         registry = tool_registry or build_default_registry()

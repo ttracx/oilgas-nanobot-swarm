@@ -49,7 +49,7 @@ class HttpFetchTool(BaseTool):
         "required": ["url"],
     }
 
-    def __init__(self, timeout: float = 20.0):
+    def __init__(self, timeout: float = 60.0):
         self.timeout = timeout
 
     async def run(

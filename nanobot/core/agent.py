@@ -8,6 +8,7 @@ import asyncio
 import uuid
 import time
 import structlog
+import httpx
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
@@ -67,7 +68,7 @@ class AgentConfig:
     temperature: float = 0.1
     top_p: float = 0.95
     max_retries: int = 3
-    timeout_seconds: float = 120.0
+    timeout_seconds: float = 300.0
 
 
 @dataclass
@@ -111,7 +112,21 @@ class Nanobot:
         self.client = AsyncOpenAI(
             base_url=vllm_base_url,
             api_key=api_key,
-            timeout=config.timeout_seconds,
+            timeout=httpx.Timeout(
+                connect=30.0,
+                read=max(config.timeout_seconds, 600.0),
+                write=60.0,
+                pool=60.0,
+            ),
+            http_client=httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    connect=30.0,
+                    read=max(config.timeout_seconds, 600.0),
+                    write=60.0,
+                    pool=60.0,
+                ),
+                http2=True,
+            ),
         )
 
         log.info("nanobot_init", id=self.id, role=config.role, name=config.name)
@@ -129,17 +144,34 @@ class Nanobot:
         reraise=True,
     )
     async def _call_llm(self, messages: list[dict]) -> tuple[str, int]:
-        response = await self.client.chat.completions.create(
+        """Call LLM with streaming to keep connections alive for cloud models."""
+        content_parts: list[str] = []
+        total_tokens = 0
+
+        kwargs = dict(
             model="nanobot-reasoner",
             messages=messages,
             max_tokens=self.config.max_tokens,
             temperature=self.config.temperature,
             top_p=self.config.top_p,
-            stream=False,
+            stream=True,
+            stream_options={"include_usage": True},
         )
-        content = response.choices[0].message.content or ""
-        tokens = response.usage.total_tokens if response.usage else 0
-        return content, tokens
+
+        try:
+            stream = await self.client.chat.completions.create(**kwargs)
+        except Exception:
+            # Fallback: some backends don't support stream_options
+            kwargs.pop("stream_options", None)
+            stream = await self.client.chat.completions.create(**kwargs)
+
+        async for chunk in stream:
+            if chunk.usage:
+                total_tokens = chunk.usage.total_tokens
+            if chunk.choices and chunk.choices[0].delta.content:
+                content_parts.append(chunk.choices[0].delta.content)
+
+        return "".join(content_parts), total_tokens
 
     async def execute(self, task: AgentTask) -> AgentResult:
         start_time = time.time()

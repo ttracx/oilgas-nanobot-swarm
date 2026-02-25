@@ -87,7 +87,7 @@ class SubSwarm:
                 system_prompt=prompt,
                 max_tokens=2048,
                 temperature=0.05,
-                timeout_seconds=90.0,
+                timeout_seconds=300.0,
             ),
             session_id=self.session_id,
             vllm_base_url=self.vllm_url,

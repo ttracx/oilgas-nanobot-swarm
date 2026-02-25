@@ -25,4 +25,5 @@ uvicorn nanobot.api.gateway:app \
     --port 8100 \
     --workers 1 \
     --log-level info \
+    --timeout-keep-alive 600 \
     2>&1 | tee ~/nanobot_gateway.log

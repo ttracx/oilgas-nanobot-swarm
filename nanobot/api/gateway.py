@@ -5,6 +5,7 @@ REST API for external systems (including OpenClaw/Nellie) to dispatch goals.
 
 import os
 import structlog
+import httpx
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,10 +24,44 @@ log = structlog.get_logger()
 GATEWAY_API_KEY = os.getenv("GATEWAY_API_KEY", "nq-gateway-key")
 VLLM_URL = os.getenv("VLLM_URL", "http://localhost:8000/v1")
 VLLM_API_KEY = os.getenv("VLLM_API_KEY", "nq-nanobot")
+WARMUP_MODEL = os.getenv("WARMUP_MODEL", "")  # e.g. "qwen3-coder-next" — empty to skip
 
 hierarchical_swarm: HierarchicalSwarm | None = None
 flat_swarm: NanobotSwarm | None = None
 state_manager = SwarmStateManager()
+
+
+async def _warmup_models() -> None:
+    """Ping the LLM backend with a tiny generation to warm up model loading."""
+    if not WARMUP_MODEL:
+        return
+    models = [m.strip() for m in WARMUP_MODEL.split(",") if m.strip()]
+    base_url = VLLM_URL.rstrip("/").removesuffix("/v1")
+
+    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=10, read=120, write=30, pool=30)) as client:
+        for model in models:
+            try:
+                resp = await client.post(
+                    f"{base_url}/api/generate",
+                    json={"model": model, "prompt": "ping", "stream": False, "options": {"num_predict": 8}},
+                )
+                log.info("warmup_complete", model=model, status=resp.status_code)
+            except Exception as e:
+                # Also try OpenAI-compatible endpoint
+                try:
+                    resp = await client.post(
+                        f"{base_url}/v1/chat/completions",
+                        json={
+                            "model": model,
+                            "messages": [{"role": "user", "content": "ping"}],
+                            "max_tokens": 8,
+                            "stream": False,
+                        },
+                        headers={"Authorization": f"Bearer {VLLM_API_KEY}"},
+                    )
+                    log.info("warmup_complete", model=model, status=resp.status_code, endpoint="openai")
+                except Exception as e2:
+                    log.warning("warmup_failed", model=model, error=str(e2)[:100])
 
 
 @asynccontextmanager
@@ -45,6 +80,11 @@ async def lifespan(app: FastAPI):
         max_parallel_agents=8,
     )
     set_swarm_instances(hierarchical_swarm, flat_swarm)
+
+    # Warmup models in background — don't block startup
+    import asyncio
+    asyncio.create_task(_warmup_models())
+
     yield
     await close_pool()
     log.info("gateway_shutdown")
