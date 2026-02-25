@@ -387,3 +387,49 @@ async def msgraph_ingest_emails(count: int = 10, _: str = Depends(verify_opencla
         ingested += created
 
     return {"emails_processed": len(emails), "entities_created": ingested}
+
+
+@router.post("/msgraph/contacts/ingest")
+async def msgraph_ingest_contacts(_: str = Depends(verify_openclaw_key)):
+    """Fetch Outlook contacts and merge into the knowledge vault (no LLM needed)."""
+    if not ms_graph.creds.is_token_valid:
+        await ms_graph.initialize()
+    if not ms_graph.creds.is_token_valid:
+        raise HTTPException(401, "Microsoft Graph not authenticated")
+
+    contacts = await ms_graph.get_contacts(count=200)
+    created = await graph_builder.ingest_contacts(contacts)
+    return {"contacts_processed": len(contacts), "people_created": created}
+
+
+@router.post("/msgraph/tasks/ingest")
+async def msgraph_ingest_tasks(_: str = Depends(verify_openclaw_key)):
+    """Fetch To Do tasks and merge into the knowledge vault as commitments (no LLM needed)."""
+    if not ms_graph.creds.is_token_valid:
+        await ms_graph.initialize()
+    if not ms_graph.creds.is_token_valid:
+        raise HTTPException(401, "Microsoft Graph not authenticated")
+
+    tasks = await ms_graph.get_tasks(status="notStarted", count=50)
+    created = await graph_builder.ingest_tasks(tasks)
+    return {"tasks_processed": len(tasks), "commitments_created": created}
+
+
+@router.get("/msgraph/daily-digest")
+async def msgraph_daily_digest(_: str = Depends(verify_openclaw_key)):
+    """Get a complete daily digest: unread emails + today's events + pending tasks."""
+    if not ms_graph.creds.is_token_valid:
+        await ms_graph.initialize()
+    if not ms_graph.creds.is_token_valid:
+        raise HTTPException(401, "Microsoft Graph not authenticated")
+    return await ms_graph.get_daily_digest()
+
+
+@router.get("/msgraph/person/{name_or_email}")
+async def msgraph_person_context(name_or_email: str, _: str = Depends(verify_openclaw_key)):
+    """Get all context about a person: contact card, recent emails, shared events."""
+    if not ms_graph.creds.is_token_valid:
+        await ms_graph.initialize()
+    if not ms_graph.creds.is_token_valid:
+        raise HTTPException(401, "Microsoft Graph not authenticated")
+    return await ms_graph.get_person_context(name_or_email)

@@ -14,8 +14,10 @@ The integration exposes both:
 2. Nanobot tools (for agents to query during execution)
 """
 
+import asyncio
 import json
 import os
+import re
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -34,12 +36,13 @@ GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
 # Default scopes for Nellie's Microsoft Graph access
 DEFAULT_SCOPES = [
-    "Mail.Read",
+    "User.Read",
     "Mail.ReadWrite",
     "Mail.Send",
-    "Calendars.Read",
+    "Calendars.ReadWrite",
+    "Contacts.Read",
     "Files.Read",
-    "User.Read",
+    "Tasks.ReadWrite",
 ]
 
 
@@ -173,25 +176,60 @@ class MicrosoftGraphClient:
         return False
 
     async def _get(self, endpoint: str, params: dict | None = None) -> dict | None:
-        """Make a GET request to Microsoft Graph API."""
+        """Make a GET request to Microsoft Graph API with 429 retry."""
         if not await self._ensure_token() or not self._client:
             return None
-        try:
-            resp = await self._client.get(f"{GRAPH_BASE}{endpoint}", params=params)
-            if resp.status_code == 200:
-                return resp.json()
-            elif resp.status_code == 401:
-                # Token expired during request — try refresh
-                if await self._refresh_token():
-                    self._client.headers.update(self._auth_headers())
-                    resp = await self._client.get(f"{GRAPH_BASE}{endpoint}", params=params)
-                    if resp.status_code == 200:
-                        return resp.json()
-            log.warning("ms_graph_get_error", endpoint=endpoint, status=resp.status_code)
-            return None
-        except Exception as e:
-            log.error("ms_graph_request_error", endpoint=endpoint, error=str(e))
-            return None
+
+        url = endpoint if endpoint.startswith("https://") else f"{GRAPH_BASE}{endpoint}"
+        retries = 0
+        max_retries = 3
+
+        while retries <= max_retries:
+            try:
+                resp = await self._client.get(url, params=params if retries == 0 else None)
+                if resp.status_code == 200:
+                    return resp.json()
+                elif resp.status_code == 429:
+                    # Rate limited — respect Retry-After header
+                    retry_after = int(resp.headers.get("Retry-After", "5"))
+                    log.warning("ms_graph_rate_limited", endpoint=endpoint, retry_after=retry_after)
+                    await asyncio.sleep(retry_after)
+                    retries += 1
+                    continue
+                elif resp.status_code == 401:
+                    if await self._refresh_token():
+                        self._client.headers.update(self._auth_headers())
+                        retries += 1
+                        continue
+                log.warning("ms_graph_get_error", endpoint=endpoint, status=resp.status_code)
+                return None
+            except Exception as e:
+                log.error("ms_graph_request_error", endpoint=endpoint, error=str(e))
+                return None
+        return None
+
+    async def _paginate(
+        self, endpoint: str, params: dict | None = None, max_pages: int = 5,
+    ) -> list[dict]:
+        """Auto-paginate through a Graph API collection following @odata.nextLink."""
+        results: list[dict] = []
+        data = await self._get(endpoint, params)
+        if not data:
+            return results
+
+        results.extend(data.get("value", []))
+        next_link = data.get("@odata.nextLink")
+        page = 1
+
+        while next_link and page < max_pages:
+            data = await self._get(next_link)
+            if not data:
+                break
+            results.extend(data.get("value", []))
+            next_link = data.get("@odata.nextLink")
+            page += 1
+
+        return results
 
     async def _post(self, endpoint: str, data: dict) -> dict | None:
         """Make a POST request to Microsoft Graph API."""
@@ -380,6 +418,167 @@ class MicrosoftGraphClient:
             }
             for evt in data.get("value", [])
         ]
+
+    # ── Contacts ──────────────────────────────────────────────────────────
+
+    async def get_contacts(self, count: int = 100) -> list[dict]:
+        """Get Outlook contacts (structured data — no LLM needed for vault merge)."""
+        results = await self._paginate(
+            "/me/contacts",
+            params={
+                "$top": str(min(count, 100)),
+                "$select": "id,displayName,givenName,surname,emailAddresses,businessPhones,mobilePhone,companyName,jobTitle,department",
+                "$orderby": "displayName",
+            },
+            max_pages=max(1, count // 100),
+        )
+        return [
+            {
+                "id": c.get("id", ""),
+                "name": c.get("displayName", ""),
+                "email": (c.get("emailAddresses") or [{}])[0].get("address", "") if c.get("emailAddresses") else "",
+                "company": c.get("companyName", ""),
+                "title": c.get("jobTitle", ""),
+                "department": c.get("department", ""),
+                "phone": (c.get("businessPhones") or [""])[0] or c.get("mobilePhone", ""),
+            }
+            for c in results if c.get("displayName")
+        ]
+
+    async def search_contacts(self, query: str) -> list[dict]:
+        """Search contacts by name prefix."""
+        safe_query = query.replace("'", "''")
+        results = await self._paginate(
+            "/me/contacts",
+            params={
+                "$filter": f"startswith(displayName,'{safe_query}')",
+                "$top": "25",
+                "$select": "id,displayName,emailAddresses,companyName,jobTitle",
+            },
+        )
+        return [
+            {
+                "name": c.get("displayName", ""),
+                "email": (c.get("emailAddresses") or [{}])[0].get("address", "") if c.get("emailAddresses") else "",
+                "company": c.get("companyName", ""),
+                "title": c.get("jobTitle", ""),
+            }
+            for c in results if c.get("displayName")
+        ]
+
+    # ── Tasks (Microsoft To Do) ──────────────────────────────────────────
+
+    async def get_task_lists(self) -> list[dict]:
+        """Get all To Do task lists."""
+        results = await self._paginate("/me/todo/lists")
+        return [
+            {"id": tl.get("id", ""), "name": tl.get("displayName", "")}
+            for tl in results
+        ]
+
+    async def get_tasks(
+        self, status: str = "all", count: int = 50, list_id: str | None = None,
+    ) -> list[dict]:
+        """Get tasks from Microsoft To Do. Status: notStarted, inProgress, completed, all."""
+        if list_id:
+            params: dict[str, str] = {"$top": str(count)}
+            if status != "all":
+                params["$filter"] = f"status eq '{status}'"
+            results = await self._paginate(f"/me/todo/lists/{list_id}/tasks", params)
+        else:
+            # Fetch from all lists
+            lists = await self.get_task_lists()
+            results = []
+            for tl in lists:
+                params = {"$top": str(count)}
+                if status != "all":
+                    params["$filter"] = f"status eq '{status}'"
+                try:
+                    tasks = await self._paginate(f"/me/todo/lists/{tl['id']}/tasks", params)
+                    for t in tasks:
+                        t["_list_name"] = tl["name"]
+                    results.extend(tasks)
+                except Exception:
+                    pass
+
+        return [
+            {
+                "id": t.get("id", ""),
+                "title": t.get("title", ""),
+                "status": t.get("status", ""),
+                "importance": t.get("importance", "normal"),
+                "due": (t.get("dueDateTime") or {}).get("dateTime", "")[:10] if t.get("dueDateTime") else "",
+                "list": t.get("_list_name", ""),
+            }
+            for t in results[:count] if t.get("title")
+        ]
+
+    async def create_task(
+        self, title: str, list_id: str | None = None,
+        body: str = "", due_date: str = "", importance: str = "normal",
+    ) -> dict | None:
+        """Create a task in Microsoft To Do."""
+        if not list_id:
+            lists = await self.get_task_lists()
+            if not lists:
+                return None
+            list_id = lists[0]["id"]
+
+        task_data: dict[str, Any] = {"title": title, "importance": importance}
+        if body:
+            task_data["body"] = {"content": body, "contentType": "text"}
+        if due_date:
+            task_data["dueDateTime"] = {"dateTime": due_date, "timeZone": "America/Chicago"}
+
+        return await self._post(f"/me/todo/lists/{list_id}/tasks", task_data)
+
+    # ── Composite Queries ─────────────────────────────────────────────────
+
+    async def get_daily_digest(self) -> dict:
+        """Daily digest: unread emails + today's events + pending tasks in parallel."""
+        emails_task = asyncio.create_task(self.get_recent_emails(count=50, folder="inbox"))
+        events_task = asyncio.create_task(self.get_today_events())
+        tasks_task = asyncio.create_task(self.get_tasks(status="notStarted", count=25))
+
+        emails = await emails_task
+        events = await events_task
+        tasks = await tasks_task
+
+        # Filter to unread only
+        unread = [e for e in emails if not e.get("is_read")]
+
+        return {
+            "summary": f"{len(unread)} unread emails, {len(events)} events today, {len(tasks)} pending tasks",
+            "unread_emails": unread[:15],
+            "today_events": events,
+            "pending_tasks": tasks,
+        }
+
+    async def get_person_context(self, name_or_email: str) -> dict:
+        """Gather all context about a person: contact + emails + shared events."""
+        contacts_task = asyncio.create_task(self.search_contacts(name_or_email))
+        emails_task = asyncio.create_task(self.search_emails(name_or_email, count=10))
+        events_task = asyncio.create_task(self.get_upcoming_events(days=30))
+
+        contacts = await contacts_task
+        emails = await emails_task
+        events = await events_task
+
+        contact = contacts[0] if contacts else None
+
+        # Filter events to those with the person as attendee
+        search_lower = name_or_email.lower()
+        shared = [
+            e for e in events
+            if any(search_lower in a.lower() for a in e.get("attendees", []))
+            or search_lower in e.get("organizer", "").lower()
+        ]
+
+        return {
+            "contact": contact,
+            "recent_emails": emails[:5],
+            "shared_events": shared[:5],
+        }
 
     # ── User Profile ─────────────────────────────────────────────────────
 

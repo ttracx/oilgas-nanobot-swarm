@@ -390,6 +390,86 @@ class EmailDraftTool(BaseTool):
             )
 
 
+class DailyDigestTool(BaseTool):
+    """Get a complete daily digest from Microsoft 365."""
+
+    name = "daily_digest"
+    description = (
+        "Get a full daily digest: unread emails, today's calendar events, and pending tasks "
+        "from Microsoft 365 in one call. Use this for morning briefings."
+    )
+    parameters_schema = {"type": "object", "properties": {}}
+
+    async def run(self) -> ToolResult:
+        t0 = time.time()
+        try:
+            if not ms_graph.creds.is_configured:
+                await ms_graph.initialize()
+            if not ms_graph.creds.is_token_valid:
+                return ToolResult(
+                    tool_name=self.name, success=False,
+                    output="Microsoft Graph not authenticated.",
+                    duration_seconds=time.time() - t0,
+                )
+            result = await ms_graph.get_daily_digest()
+            output = json.dumps(result, indent=2, default=str)
+            return ToolResult(
+                tool_name=self.name, success=True,
+                output=output, raw=result, duration_seconds=time.time() - t0,
+            )
+        except Exception as e:
+            return ToolResult(
+                tool_name=self.name, success=False,
+                output=f"Daily digest failed: {e}",
+                error=str(e), duration_seconds=time.time() - t0,
+            )
+
+
+class PersonContextTool(BaseTool):
+    """Get all Microsoft 365 context about a person."""
+
+    name = "person_context"
+    description = (
+        "Get all context about a person from Microsoft 365: contact card, "
+        "recent emails, and shared calendar events. Use for preparing "
+        "meeting notes or understanding relationship context."
+    )
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "name_or_email": {
+                "type": "string",
+                "description": "Person's name or email address to look up",
+            },
+        },
+        "required": ["name_or_email"],
+    }
+
+    async def run(self, name_or_email: str) -> ToolResult:
+        t0 = time.time()
+        try:
+            if not ms_graph.creds.is_configured:
+                await ms_graph.initialize()
+            if not ms_graph.creds.is_token_valid:
+                return ToolResult(
+                    tool_name=self.name, success=False,
+                    output="Microsoft Graph not authenticated.",
+                    duration_seconds=time.time() - t0,
+                )
+            result = await ms_graph.get_person_context(name_or_email)
+            output = json.dumps(result, indent=2, default=str)
+            return ToolResult(
+                tool_name=self.name, success=True,
+                output=output, raw=result, duration_seconds=time.time() - t0,
+            )
+        except Exception as e:
+            return ToolResult(
+                tool_name=self.name, success=False,
+                output=f"Person context failed: {e}",
+                error=str(e), duration_seconds=time.time() - t0,
+            )
+
+
 def register_msgraph_tools(registry) -> None:
     """Register all Microsoft Graph tools with a ToolRegistry."""
     registry.register(EmailSearchTool())
@@ -399,4 +479,6 @@ def register_msgraph_tools(registry) -> None:
     registry.register(CalendarUpcomingTool())
     registry.register(EmailSendTool())
     registry.register(EmailDraftTool())
-    log.info("msgraph_tools_registered", count=7)
+    registry.register(DailyDigestTool())
+    registry.register(PersonContextTool())
+    log.info("msgraph_tools_registered", count=9)

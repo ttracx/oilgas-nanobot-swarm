@@ -395,6 +395,100 @@ class GraphBuilder:
 
         return "\n\n---\n\n".join(parts) if parts else "(empty vault)"
 
+    async def ingest_contacts(self, contacts: list[dict]) -> int:
+        """Ingest Microsoft 365 contacts directly into vault (no LLM needed).
+
+        Contacts are structured data — bypass LLM extraction and merge directly.
+        """
+        created = 0
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        for c in contacts:
+            name = c.get("name", "").strip()
+            if not name or len(name) < 2:
+                continue
+
+            category = "people"
+            source_info = {"type": "document", "ref": f"outlook-contact:{c.get('id', '')}", "date": today}
+
+            # Build context from structured fields
+            ctx_parts = []
+            if c.get("title"):
+                ctx_parts.append(f"Title: {c['title']}")
+            if c.get("company"):
+                ctx_parts.append(f"Company: {c['company']}")
+            if c.get("email"):
+                ctx_parts.append(f"Email: {c['email']}")
+            if c.get("department"):
+                ctx_parts.append(f"Department: {c['department']}")
+            context = ". ".join(ctx_parts) or "Microsoft 365 contact"
+
+            relationships = [c["company"]] if c.get("company") else []
+
+            existing = vault.read_note(category, name)
+            if existing:
+                vault.update_note(
+                    category, name,
+                    append_content=context,
+                    new_backlinks=relationships or None,
+                    add_source=source_info,
+                    new_confidence=1.0,
+                )
+            else:
+                vault.create_note(
+                    category, name,
+                    content=f"{context}\n\n## History\n",
+                    metadata={"role": c.get("title", "")} if c.get("title") else None,
+                    backlinks=relationships or None,
+                    sources=[source_info],
+                    confidence=1.0,
+                )
+                created += 1
+
+        log.info("contacts_ingested", total=len(contacts), created=created)
+        return created
+
+    async def ingest_tasks(self, tasks: list[dict]) -> int:
+        """Ingest Microsoft To Do tasks directly into vault as commitments (no LLM needed)."""
+        created = 0
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        for t in tasks:
+            title = t.get("title", "").strip()
+            if not title:
+                continue
+
+            source_info = {"type": "document", "ref": f"todo:{t.get('id', '')}", "date": today}
+            ctx_parts = [f"Status: {t.get('status', 'unknown')}"]
+            if t.get("importance"):
+                ctx_parts.append(f"Importance: {t['importance']}")
+            if t.get("due"):
+                ctx_parts.append(f"Due: {t['due']}")
+            if t.get("list"):
+                ctx_parts.append(f"List: {t['list']}")
+            context = ". ".join(ctx_parts)
+
+            existing = vault.read_note("commitments", title)
+            if existing:
+                vault.update_note(
+                    "commitments", title,
+                    append_content=context,
+                    add_source=source_info,
+                    update_metadata={"status": t.get("status", "open")},
+                )
+            else:
+                vault.create_note(
+                    "commitments", title,
+                    content=f"{context}\n\n## History\n",
+                    sources=[source_info],
+                    metadata={"status": t.get("status", "open")},
+                    confidence=1.0,
+                )
+                created += 1
+
+        log.info("tasks_ingested", total=len(tasks), created=created)
+        return created
+
     def get_status(self) -> dict:
         """Get builder status."""
         return {
