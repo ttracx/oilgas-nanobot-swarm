@@ -17,6 +17,7 @@ class AgentTeam:
     name: str
     description: str
     mode: str = "hierarchical"  # "hierarchical" or "flat"
+    backend: str = "auto"  # "auto", "claude", or "vllm"
     system_prompt: str = ""
     inject_knowledge: bool = True
     inject_history: bool = True

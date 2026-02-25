@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from nanobot.core.hierarchical_swarm import HierarchicalSwarm
 from nanobot.core.orchestrator import NanobotSwarm
+from nanobot.core.claude_runner import ClaudeTeamRunner
 from nanobot.core.roles import L1Role, L2Role
 from nanobot.state.swarm_state import SwarmStateManager
 from nanobot.state.task_journal import TaskJournal
@@ -21,6 +22,7 @@ from nanobot.integrations.openclaw_connector import router as openclaw_router, s
 from nanobot.api.knowledge_routes import router as knowledge_router
 from nanobot.knowledge.graph_builder import graph_builder
 from nanobot.scheduler.scheduler import scheduler
+from nanobot.scheduler.agent_teams import get_team
 from nanobot.tools.knowledge_tools import register_knowledge_tools
 from nanobot.tools.msgraph_tools import register_msgraph_tools
 from nanobot.tools.base import ToolRegistry
@@ -32,9 +34,11 @@ GATEWAY_API_KEY = os.getenv("GATEWAY_API_KEY", "nq-gateway-key")
 VLLM_URL = os.getenv("VLLM_URL", "http://localhost:8000/v1")
 VLLM_API_KEY = os.getenv("VLLM_API_KEY", "nq-nanobot")
 WARMUP_MODEL = os.getenv("WARMUP_MODEL", "")  # e.g. "qwen3-coder-next" — empty to skip
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 hierarchical_swarm: HierarchicalSwarm | None = None
 flat_swarm: NanobotSwarm | None = None
+claude_runner: ClaudeTeamRunner | None = None
 state_manager = SwarmStateManager()
 
 
@@ -73,7 +77,7 @@ async def _warmup_models() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global hierarchical_swarm, flat_swarm
+    global hierarchical_swarm, flat_swarm, claude_runner
     log.info("gateway_startup")
     hierarchical_swarm = HierarchicalSwarm(
         vllm_url=VLLM_URL,
@@ -87,6 +91,13 @@ async def lifespan(app: FastAPI):
         max_parallel_agents=8,
     )
     set_swarm_instances(hierarchical_swarm, flat_swarm)
+
+    # Initialize Claude runner if API key is available
+    if ANTHROPIC_API_KEY:
+        claude_runner = ClaudeTeamRunner()
+        log.info("claude_runner_initialized", model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"))
+    else:
+        log.info("claude_runner_skipped", reason="ANTHROPIC_API_KEY not set")
 
     # Warmup models in background — don't block startup
     import asyncio
@@ -105,7 +116,31 @@ async def lifespan(app: FastAPI):
 
     # Start background scheduler with swarm runner
     async def _swarm_runner(goal: str, mode: str, context: dict) -> dict:
-        """Scheduler callback — routes to appropriate swarm."""
+        """Scheduler callback — routes to appropriate swarm backend.
+
+        Backend selection:
+        1. If a team specifies backend="claude" and Claude is available → use Claude
+        2. If backend="auto" and Claude is available → prefer Claude for flat mode
+        3. Otherwise → fall back to vLLM swarm
+        """
+        # Check if the calling team prefers Claude
+        team_name = context.pop("_team_name", None) if isinstance(context, dict) else None
+        team = get_team(team_name) if team_name else None
+        use_claude = False
+
+        if claude_runner:
+            if team and team.backend == "claude":
+                use_claude = True
+            elif team and team.backend == "auto" and mode == "flat":
+                use_claude = True
+            elif not team and mode == "flat":
+                use_claude = True
+
+        if use_claude and claude_runner:
+            log.info("swarm_runner_using_claude", team=team_name, mode=mode)
+            return await claude_runner.run(goal, mode, context)
+
+        # Fallback to vLLM swarm
         if mode == "hierarchical" and hierarchical_swarm:
             return await hierarchical_swarm.run(goal, context)
         elif flat_swarm:
@@ -212,12 +247,30 @@ async def run_swarm(
     )
 
 
+class ClaudeRunRequest(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=10000)
+    mode: str = Field(default="flat", description="'flat' or 'hierarchical'")
+    context: dict = Field(default_factory=dict)
+
+
+@app.post("/claude/run")
+async def run_claude(request: ClaudeRunRequest, _: str = Depends(verify_api_key)):
+    """Run a goal directly through the Claude agent executor."""
+    if not claude_runner:
+        raise HTTPException(503, "Claude runner not available — set ANTHROPIC_API_KEY")
+    result = await claude_runner.run(request.goal, request.mode, request.context)
+    if not result.get("success"):
+        raise HTTPException(500, result.get("error", "Claude run failed"))
+    return result
+
+
 @app.get("/health")
 async def health():
     return {
         "status": "ok",
         "hierarchical_swarm": hierarchical_swarm is not None,
         "flat_swarm": flat_swarm is not None,
+        "claude_runner": claude_runner is not None,
     }
 
 

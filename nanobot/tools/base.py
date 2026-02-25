@@ -43,6 +43,13 @@ class BaseTool(abc.ABC):
             },
         }
 
+    def to_anthropic_tool(self) -> dict:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "input_schema": self.parameters_schema,
+        }
+
 
 class ToolRegistry:
     """Central registry for all available tools."""
@@ -63,6 +70,9 @@ class ToolRegistry:
 
     def as_openai_functions(self) -> list[dict]:
         return [t.to_openai_function() for t in self._tools.values()]
+
+    def as_anthropic_tools(self) -> list[dict]:
+        return [t.to_anthropic_tool() for t in self._tools.values()]
 
     def __contains__(self, name: str) -> bool:
         return name in self._tools

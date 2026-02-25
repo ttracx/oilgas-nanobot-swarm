@@ -324,8 +324,9 @@ class BackgroundScheduler:
 
             full_goal = "\n\n".join(goal_parts)
 
-            # Execute via swarm
-            result = await self._swarm_runner(full_goal, team.mode, entry.context)
+            # Execute via swarm (inject team name for backend routing)
+            run_context = {**entry.context, "_team_name": entry.team}
+            result = await self._swarm_runner(full_goal, team.mode, run_context)
 
             # Persist result
             session_id = result.get("session_id", "unknown")
@@ -417,7 +418,8 @@ class BackgroundScheduler:
         goal_parts.append(f"## Task\n{task}")
         full_goal = "\n\n".join(goal_parts)
 
-        result = await self._swarm_runner(full_goal, team.mode, context or {})
+        run_context = {**(context or {}), "_team_name": team_name}
+        result = await self._swarm_runner(full_goal, team.mode, run_context)
         return result
 
     def add_schedule(self, entry_data: dict) -> None:

@@ -183,6 +183,7 @@ async def team_detail(team_name: str, _: str = Depends(verify_openclaw_key)):
         "name": team.name,
         "description": team.description,
         "mode": team.mode,
+        "backend": team.backend,
         "system_prompt": team.system_prompt,
         "inject_knowledge": team.inject_knowledge,
         "inject_history": team.inject_history,
