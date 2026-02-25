@@ -18,6 +18,13 @@ from nanobot.state.swarm_state import SwarmStateManager
 from nanobot.state.task_journal import TaskJournal
 from nanobot.state.connection import close_pool
 from nanobot.integrations.openclaw_connector import router as openclaw_router, set_swarm_instances
+from nanobot.api.knowledge_routes import router as knowledge_router
+from nanobot.knowledge.graph_builder import graph_builder
+from nanobot.scheduler.scheduler import scheduler
+from nanobot.tools.knowledge_tools import register_knowledge_tools
+from nanobot.tools.msgraph_tools import register_msgraph_tools
+from nanobot.tools.base import ToolRegistry
+from nanobot.integrations.microsoft_graph import ms_graph
 
 log = structlog.get_logger()
 
@@ -85,7 +92,36 @@ async def lifespan(app: FastAPI):
     import asyncio
     asyncio.create_task(_warmup_models())
 
+    # Initialize Microsoft Graph (non-blocking — skips if not configured)
+    try:
+        ms_initialized = await ms_graph.initialize()
+        log.info("ms_graph_initialized", success=ms_initialized)
+    except Exception as e:
+        log.warning("ms_graph_init_skipped", error=str(e)[:100])
+
+    # Start knowledge graph builder (background async task)
+    graph_builder.start()
+    log.info("graph_builder_started")
+
+    # Start background scheduler with swarm runner
+    async def _swarm_runner(goal: str, mode: str, context: dict) -> dict:
+        """Scheduler callback — routes to appropriate swarm."""
+        if mode == "hierarchical" and hierarchical_swarm:
+            return await hierarchical_swarm.run(goal, context)
+        elif flat_swarm:
+            return await flat_swarm.run(goal, context)
+        return {"success": False, "error": "No swarm available"}
+
+    scheduler.set_swarm_runner(_swarm_runner)
+    scheduler.start()
+    log.info("background_scheduler_started")
+
     yield
+
+    # Cleanup
+    scheduler.stop()
+    graph_builder.stop()
+    await ms_graph.close()
     await close_pool()
     log.info("gateway_shutdown")
 
@@ -98,6 +134,9 @@ app = FastAPI(
 
 # Include OpenClaw/Nellie OpenAI-compatible routes
 app.include_router(openclaw_router)
+
+# Include knowledge graph + scheduler routes
+app.include_router(knowledge_router)
 
 app.add_middleware(
     CORSMiddleware,

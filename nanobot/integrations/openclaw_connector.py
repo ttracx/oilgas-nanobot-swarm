@@ -32,6 +32,7 @@ from nanobot.core.hierarchical_swarm import HierarchicalSwarm
 from nanobot.core.orchestrator import NanobotSwarm
 from nanobot.state.swarm_state import SwarmStateManager
 from nanobot.integrations.nellie_memory_bridge import memory_bridge
+from nanobot.knowledge.graph_builder import graph_builder
 
 log = structlog.get_logger()
 
@@ -201,6 +202,16 @@ async def chat_completions(request: ChatCompletionRequest, _: str = Depends(veri
         await memory_bridge.persist_swarm_result(session_id_val, result)
     except Exception as e:
         log.warning("result_persist_failed", error=str(e))
+
+    # Notify graph builder of swarm completion for knowledge extraction
+    try:
+        await graph_builder.events.emit("swarm_complete", {
+            "session_id": result.get("session_id", ""),
+            "goal": goal,
+            "final_answer": result.get("final_answer", ""),
+        })
+    except Exception as e:
+        log.warning("graph_builder_notify_failed", error=str(e))
 
     if not result.get("success"):
         error_msg = result.get("error", "Swarm execution failed")

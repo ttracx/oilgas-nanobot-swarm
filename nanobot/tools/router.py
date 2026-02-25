@@ -11,6 +11,7 @@ Hardened for Ollama cloud models:
 
 import asyncio
 import json
+import os
 import time
 import structlog
 from openai import AsyncOpenAI
@@ -22,6 +23,7 @@ log = structlog.get_logger()
 MAX_TOOL_ITERATIONS = 10
 LLM_RETRIES = 2
 LLM_BACKOFF_BASE = 1.0  # seconds — retries at 1s, 2s
+SWARM_MODEL = os.getenv("SWARM_MODEL", "nanobot-reasoner")
 
 
 class ToolRouter:
@@ -229,7 +231,7 @@ class ToolRouter:
     async def run_with_tools(
         self,
         messages: list[dict],
-        model: str = "nanobot-reasoner",
+        model: str = "",
         max_tokens: int = 2048,
         temperature: float = 0.1,
         top_p: float = 0.95,
@@ -242,6 +244,7 @@ class ToolRouter:
 
         Returns: (final_text, updated_messages, total_tokens_used)
         """
+        model = model or SWARM_MODEL
         tools = self.registry.as_openai_functions()
         current_messages = list(messages)
         total_tokens = 0

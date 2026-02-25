@@ -15,6 +15,8 @@ from nanobot.tools.web_search import WebSearchTool
 from nanobot.tools.code_runner import CodeRunnerTool
 from nanobot.tools.file_io import FileIOTool
 from nanobot.tools.http_fetch import HttpFetchTool
+from nanobot.tools.knowledge_tools import register_knowledge_tools
+from nanobot.tools.msgraph_tools import register_msgraph_tools
 
 log = structlog.get_logger()
 
@@ -25,6 +27,8 @@ def build_default_registry() -> ToolRegistry:
     registry.register(CodeRunnerTool())
     registry.register(FileIOTool())
     registry.register(HttpFetchTool())
+    register_knowledge_tools(registry)
+    register_msgraph_tools(registry)
     return registry
 
 

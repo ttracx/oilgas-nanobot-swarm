@@ -5,6 +5,7 @@ reports results to orchestrator.
 """
 
 import asyncio
+import os
 import uuid
 import time
 import structlog
@@ -149,7 +150,7 @@ class Nanobot:
         total_tokens = 0
 
         kwargs = dict(
-            model="nanobot-reasoner",
+            model=os.getenv("SWARM_MODEL", "nanobot-reasoner"),
             messages=messages,
             max_tokens=self.config.max_tokens,
             temperature=self.config.temperature,
