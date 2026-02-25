@@ -116,7 +116,12 @@ class MicrosoftGraphCredentials:
             return False
 
     def _init_msal(self) -> None:
-        """Initialize the MSAL PublicClientApplication with file-based cache."""
+        """Initialize MSAL applications.
+
+        Creates both:
+        - ConfidentialClientApplication (if client_secret set) for client_credentials flow
+        - PublicClientApplication for device code flow (interactive)
+        """
         cache = msal.SerializableTokenCache()
 
         # Load existing cache from disk
@@ -127,9 +132,23 @@ class MicrosoftGraphCredentials:
             except Exception as e:
                 log.warning("msal_cache_load_failed", error=str(e))
 
+        authority = f"https://login.microsoftonline.com/{self.tenant_id}"
+
+        # Confidential app for client_credentials (app-only, no user interaction)
+        if self.client_secret:
+            self._msal_confidential = msal.ConfidentialClientApplication(
+                client_id=self.client_id,
+                client_credential=self.client_secret,
+                authority=authority,
+                token_cache=cache,
+            )
+        else:
+            self._msal_confidential = None
+
+        # Public app for device code flow (delegated, interactive)
         self._msal_app = msal.PublicClientApplication(
             client_id=self.client_id,
-            authority=f"https://login.microsoftonline.com/{self.tenant_id}",
+            authority=authority,
             token_cache=cache,
         )
 
@@ -144,20 +163,36 @@ class MicrosoftGraphCredentials:
                 log.warning("msal_cache_save_failed", error=str(e))
 
     def acquire_token_silent(self) -> bool:
-        """Try to acquire a token silently from the MSAL cache."""
-        if not self._msal_app or not self._msal_account:
-            return False
+        """Try to acquire a token silently.
 
-        result = self._msal_app.acquire_token_silent(
-            scopes=DEFAULT_SCOPES,
-            account=self._msal_account,
-        )
+        Strategy:
+        1. Try client_credentials flow (app-only, instant, no user needed)
+        2. Fall back to cached delegated token via PublicClientApplication
+        """
+        # Try client_credentials (app-only) — works if client_secret is set
+        if self._msal_confidential:
+            # For client_credentials, scopes must use .default
+            result = self._msal_confidential.acquire_token_for_client(
+                scopes=["https://graph.microsoft.com/.default"],
+            )
+            if result and "access_token" in result:
+                self.access_token = result["access_token"]
+                self.token_expires = time.time() + result.get("expires_in", 3600) - 60
+                self._save_msal_cache()
+                return True
 
-        if result and "access_token" in result:
-            self.access_token = result["access_token"]
-            self.token_expires = time.time() + result.get("expires_in", 3600) - 60
-            self._save_msal_cache()
-            return True
+        # Fall back to delegated token from cache
+        if self._msal_app and self._msal_account:
+            result = self._msal_app.acquire_token_silent(
+                scopes=DEFAULT_SCOPES,
+                account=self._msal_account,
+            )
+            if result and "access_token" in result:
+                self.access_token = result["access_token"]
+                self.token_expires = time.time() + result.get("expires_in", 3600) - 60
+                self._save_msal_cache()
+                return True
+
         return False
 
     def acquire_token_device_code(self) -> bool:
@@ -230,11 +265,31 @@ class MicrosoftGraphClient:
 
     Handles authentication, token refresh, and provides methods for
     mail, calendar, and file operations.
+
+    Supports two modes:
+    - App-only (client_credentials): Uses /users/{user_id}/ endpoints
+    - Delegated (device code): Uses /me/ endpoints
     """
+
+    # Default user for app-only mode (nellie@vibecaas.com)
+    DEFAULT_USER = os.getenv("MS_GRAPH_USER", "nellie@vibecaas.com")
 
     def __init__(self):
         self.creds = MicrosoftGraphCredentials()
         self._client: httpx.AsyncClient | None = None
+        self._user_id: str = ""  # Resolved user ID for app-only mode
+        self._app_only: bool = False  # True when using client_credentials
+
+    @property
+    def _me(self) -> str:
+        """Return the base path for user-scoped requests.
+
+        App-only mode: /users/{user_id}
+        Delegated mode: /me
+        """
+        if self._app_only and self._user_id:
+            return f"/users/{self._user_id}"
+        return "/me"
 
     async def initialize(self) -> bool:
         """Initialize the client — load credentials, acquire token via MSAL.
@@ -249,8 +304,8 @@ class MicrosoftGraphClient:
         if not self.creds.load():
             return False
 
-        # Try MSAL silent first (handles refresh token automatically)
-        if self.creds.has_cached_account:
+        # Try MSAL token acquisition (client_credentials if secret set, or silent cache)
+        if self.creds._msal_confidential or self.creds.has_cached_account:
             if self.creds.acquire_token_silent():
                 log.info("ms_graph_silent_auth_success")
             else:
@@ -264,6 +319,13 @@ class MicrosoftGraphClient:
             timeout=httpx.Timeout(connect=10, read=30, write=30, pool=30),
             headers=self._auth_headers(),
         )
+
+        # Detect app-only mode — use UPN directly, no extra HTTP call
+        if self.creds.is_token_valid and self.creds._msal_confidential and not self.creds._msal_account:
+            self._app_only = True
+            self._user_id = self.DEFAULT_USER  # UPN works in /users/{upn}/ paths
+            log.info("ms_graph_app_only_mode", user=self.DEFAULT_USER)
+
         return self.creds.is_token_valid
 
     async def authenticate_interactive(self) -> bool:
@@ -427,7 +489,7 @@ class MicrosoftGraphClient:
     async def get_recent_emails(self, count: int = 20, folder: str = "inbox") -> list[dict]:
         """Get recent emails from the specified folder."""
         data = await self._get(
-            f"/me/mailFolders/{folder}/messages",
+            f"{self._me}/mailFolders/{folder}/messages",
             params={
                 "$top": str(count),
                 "$orderby": "receivedDateTime desc",
@@ -454,7 +516,7 @@ class MicrosoftGraphClient:
     async def get_email_body(self, message_id: str) -> dict | None:
         """Get the full body of an email."""
         data = await self._get(
-            f"/me/messages/{message_id}",
+            f"{self._me}/messages/{message_id}",
             params={"$select": "id,subject,from,toRecipients,body,receivedDateTime,conversationId"},
         )
         if not data:
@@ -472,7 +534,7 @@ class MicrosoftGraphClient:
     async def search_emails(self, query: str, count: int = 10) -> list[dict]:
         """Search emails by subject, body, or sender."""
         data = await self._get(
-            "/me/messages",
+            f"{self._me}/messages",
             params={
                 "$search": f'"{query}"',
                 "$top": str(count),
@@ -511,7 +573,7 @@ class MicrosoftGraphClient:
             },
             "saveToSentItems": save_to_sent,
         }
-        result = await self._post("/me/sendMail", message)
+        result = await self._post(f"{self._me}/sendMail", message)
         return result is not None
 
     async def create_draft(
@@ -529,7 +591,7 @@ class MicrosoftGraphClient:
                 {"emailAddress": {"address": addr}} for addr in to
             ],
         }
-        return await self._post("/me/messages", draft)
+        return await self._post(f"{self._me}/messages", draft)
 
     # ── Calendar ─────────────────────────────────────────────────────────
 
@@ -540,7 +602,7 @@ class MicrosoftGraphClient:
         end = now.replace(hour=23, minute=59, second=59).isoformat() + "Z"
 
         data = await self._get(
-            "/me/calendarview",
+            f"{self._me}/calendarview",
             params={
                 "startDateTime": start,
                 "endDateTime": end,
@@ -574,7 +636,7 @@ class MicrosoftGraphClient:
         end = (now + timedelta(days=days)).isoformat() + "Z"
 
         data = await self._get(
-            "/me/calendarview",
+            f"{self._me}/calendarview",
             params={
                 "startDateTime": start,
                 "endDateTime": end,
@@ -601,7 +663,7 @@ class MicrosoftGraphClient:
     async def get_contacts(self, count: int = 100) -> list[dict]:
         """Get Outlook contacts (structured data — no LLM needed for vault merge)."""
         results = await self._paginate(
-            "/me/contacts",
+            f"{self._me}/contacts",
             params={
                 "$top": str(min(count, 100)),
                 "$select": "id,displayName,givenName,surname,emailAddresses,businessPhones,mobilePhone,companyName,jobTitle,department",
@@ -626,7 +688,7 @@ class MicrosoftGraphClient:
         """Search contacts by name prefix."""
         safe_query = query.replace("'", "''")
         results = await self._paginate(
-            "/me/contacts",
+            f"{self._me}/contacts",
             params={
                 "$filter": f"startswith(displayName,'{safe_query}')",
                 "$top": "25",
@@ -647,7 +709,7 @@ class MicrosoftGraphClient:
 
     async def get_task_lists(self) -> list[dict]:
         """Get all To Do task lists."""
-        results = await self._paginate("/me/todo/lists")
+        results = await self._paginate(f"{self._me}/todo/lists")
         return [
             {"id": tl.get("id", ""), "name": tl.get("displayName", "")}
             for tl in results
@@ -661,7 +723,7 @@ class MicrosoftGraphClient:
             params: dict[str, str] = {"$top": str(count)}
             if status != "all":
                 params["$filter"] = f"status eq '{status}'"
-            results = await self._paginate(f"/me/todo/lists/{list_id}/tasks", params)
+            results = await self._paginate(f"{self._me}/todo/lists/{list_id}/tasks", params)
         else:
             # Fetch from all lists
             lists = await self.get_task_lists()
@@ -671,7 +733,7 @@ class MicrosoftGraphClient:
                 if status != "all":
                     params["$filter"] = f"status eq '{status}'"
                 try:
-                    tasks = await self._paginate(f"/me/todo/lists/{tl['id']}/tasks", params)
+                    tasks = await self._paginate(f"{self._me}/todo/lists/{tl['id']}/tasks", params)
                     for t in tasks:
                         t["_list_name"] = tl["name"]
                     results.extend(tasks)
@@ -707,7 +769,7 @@ class MicrosoftGraphClient:
         if due_date:
             task_data["dueDateTime"] = {"dateTime": due_date, "timeZone": "America/Chicago"}
 
-        return await self._post(f"/me/todo/lists/{list_id}/tasks", task_data)
+        return await self._post(f"{self._me}/todo/lists/{list_id}/tasks", task_data)
 
     # ── Composite Queries ─────────────────────────────────────────────────
 
@@ -761,7 +823,7 @@ class MicrosoftGraphClient:
 
     async def get_me(self) -> dict | None:
         """Get the authenticated user's profile."""
-        return await self._get("/me")
+        return await self._get(self._me)
 
     # ── Status ───────────────────────────────────────────────────────────
 
