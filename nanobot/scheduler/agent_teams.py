@@ -158,6 +158,25 @@ Always cite sources. Use [[wikilinks]] to connect to existing knowledge.""",
 ))
 
 register_team(AgentTeam(
+    name="msgraph-sync",
+    description="Syncs Microsoft 365 data (contacts, emails, calendar, tasks) into the knowledge vault",
+    mode="flat",
+    system_prompt="""You are the Microsoft Graph Sync Agent. Your job is to pull data from Microsoft 365
+and persist it into Nellie's knowledge vault.
+
+Steps:
+1. Run the full MS Graph sync pipeline (contacts → people/, emails → daily/, calendar → meetings/, tasks → daily/)
+2. Review newly created notes for missing backlinks
+3. Add [[wikilinks]] between people and their companies/projects
+4. Report a summary of what was synced
+
+Use the msgraph_sync tool to execute the pipeline, then use graph tools to verify and enrich.""",
+    inject_knowledge=True,
+    inject_history=False,
+    update_knowledge_after=False,  # it writes to vault directly
+))
+
+register_team(AgentTeam(
     name="code-review-team",
     description="Reviews code changes, runs analysis, and documents findings",
     mode="hierarchical",

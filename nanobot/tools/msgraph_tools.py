@@ -470,6 +470,42 @@ class PersonContextTool(BaseTool):
             )
 
 
+class MsgraphSyncTool(BaseTool):
+    """Sync Microsoft 365 data into the knowledge vault."""
+
+    name = "msgraph_sync"
+    description = (
+        "Run the full Microsoft 365 sync pipeline: contacts → people notes, "
+        "emails → daily notes, calendar → meeting notes, tasks → daily notes. "
+        "Use this to populate the vault with fresh data from Outlook."
+    )
+    parameters_schema = {"type": "object", "properties": {}}
+
+    async def run(self) -> ToolResult:
+        t0 = time.time()
+        try:
+            from nanobot.integrations.msgraph_ingestion import run_full_sync
+            result = await run_full_sync()
+            if "error" in result:
+                return ToolResult(
+                    tool_name=self.name, success=False,
+                    output=result["error"],
+                    duration_seconds=time.time() - t0,
+                )
+            output = json.dumps(result, indent=2, default=str)
+            return ToolResult(
+                tool_name=self.name, success=True,
+                output=f"Sync complete:\n{output}",
+                raw=result, duration_seconds=time.time() - t0,
+            )
+        except Exception as e:
+            return ToolResult(
+                tool_name=self.name, success=False,
+                output=f"Sync failed: {e}",
+                error=str(e), duration_seconds=time.time() - t0,
+            )
+
+
 def register_msgraph_tools(registry) -> None:
     """Register all Microsoft Graph tools with a ToolRegistry."""
     registry.register(EmailSearchTool())
@@ -481,4 +517,5 @@ def register_msgraph_tools(registry) -> None:
     registry.register(EmailDraftTool())
     registry.register(DailyDigestTool())
     registry.register(PersonContextTool())
-    log.info("msgraph_tools_registered", count=9)
+    registry.register(MsgraphSyncTool())
+    log.info("msgraph_tools_registered", count=10)

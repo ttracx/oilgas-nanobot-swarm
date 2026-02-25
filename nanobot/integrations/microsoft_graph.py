@@ -4,10 +4,13 @@ Microsoft Graph API Integration — connects Nellie to Outlook, Calendar, and On
 Provides:
 - Email ingestion (read recent emails, search, send drafts)
 - Calendar queries (today's events, upcoming meetings)
-- OneDrive file access (read documents for knowledge extraction)
+- Contact management and task operations
+- Device code flow for interactive CLI authentication
+- Automatic silent token refresh with MSAL cache persistence
 
-Authentication: Uses OAuth2 with device code flow or client credentials.
+Authentication: Uses MSAL device code flow (interactive) or silent token refresh.
 Credentials stored at ~/.nellie/config/microsoft_graph.json
+Token cache stored at ~/.nellie/config/.ms_graph_token.json
 
 The integration exposes both:
 1. Direct Python API (for graph builder and scheduler)
@@ -24,6 +27,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import msal
 import structlog
 
 log = structlog.get_logger()
@@ -46,8 +50,18 @@ DEFAULT_SCOPES = [
 ]
 
 
+MSAL_CACHE_FILE = NELLIE_HOME / "config" / ".msal_cache.json"
+
+
 class MicrosoftGraphCredentials:
-    """Manages OAuth2 credentials and token refresh for Microsoft Graph."""
+    """Manages OAuth2 credentials using MSAL with device code flow and silent refresh.
+
+    Authentication strategy:
+    1. Load config (client_id, tenant_id) from ~/.nellie/config/microsoft_graph.json
+    2. Try silent token acquisition from MSAL cache (no user interaction)
+    3. If silent fails, use device code flow (one-time interactive)
+    4. MSAL handles all token caching, refresh, and expiry automatically
+    """
 
     def __init__(self):
         self.client_id: str = ""
@@ -57,9 +71,11 @@ class MicrosoftGraphCredentials:
         self.refresh_token: str = ""
         self.token_expires: float = 0
         self._loaded = False
+        self._msal_app: msal.PublicClientApplication | None = None
+        self._msal_account: dict | None = None
 
     def load(self) -> bool:
-        """Load credentials from config file."""
+        """Load credentials from config file and initialize MSAL."""
         if not CRED_FILE.exists():
             log.info("ms_graph_no_credentials", path=str(CRED_FILE))
             return False
@@ -71,20 +87,120 @@ class MicrosoftGraphCredentials:
             self.tenant_id = data.get("tenant_id", "common")
             self._loaded = True
 
-            # Load cached token if available
-            if TOKEN_FILE.exists():
-                token_data = json.loads(TOKEN_FILE.read_text(encoding="utf-8"))
-                self.access_token = token_data.get("access_token", "")
-                self.refresh_token = token_data.get("refresh_token", "")
-                self.token_expires = token_data.get("expires_at", 0)
+            if not self.client_id or self.client_id.startswith("YOUR_"):
+                log.info("ms_graph_credentials_not_configured")
+                return False
+
+            # Initialize MSAL app with persistent cache
+            self._init_msal()
+
+            # Try to load existing account from MSAL cache
+            accounts = self._msal_app.get_accounts() if self._msal_app else []
+            if accounts:
+                self._msal_account = accounts[0]
+                log.info("ms_graph_cached_account", username=self._msal_account.get("username", ""))
+
+            # Also load legacy token file for backward compatibility
+            if TOKEN_FILE.exists() and not self._msal_account:
+                try:
+                    token_data = json.loads(TOKEN_FILE.read_text(encoding="utf-8"))
+                    self.access_token = token_data.get("access_token", "")
+                    self.refresh_token = token_data.get("refresh_token", "")
+                    self.token_expires = token_data.get("expires_at", 0)
+                except Exception:
+                    pass
 
             return bool(self.client_id)
         except Exception as e:
             log.error("ms_graph_cred_load_error", error=str(e))
             return False
 
+    def _init_msal(self) -> None:
+        """Initialize the MSAL PublicClientApplication with file-based cache."""
+        cache = msal.SerializableTokenCache()
+
+        # Load existing cache from disk
+        MSAL_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        if MSAL_CACHE_FILE.exists():
+            try:
+                cache.deserialize(MSAL_CACHE_FILE.read_text(encoding="utf-8"))
+            except Exception as e:
+                log.warning("msal_cache_load_failed", error=str(e))
+
+        self._msal_app = msal.PublicClientApplication(
+            client_id=self.client_id,
+            authority=f"https://login.microsoftonline.com/{self.tenant_id}",
+            token_cache=cache,
+        )
+
+    def _save_msal_cache(self) -> None:
+        """Persist the MSAL token cache to disk."""
+        if self._msal_app and self._msal_app.token_cache.has_state_changed:
+            try:
+                MSAL_CACHE_FILE.write_text(
+                    self._msal_app.token_cache.serialize(), encoding="utf-8"
+                )
+            except Exception as e:
+                log.warning("msal_cache_save_failed", error=str(e))
+
+    def acquire_token_silent(self) -> bool:
+        """Try to acquire a token silently from the MSAL cache."""
+        if not self._msal_app or not self._msal_account:
+            return False
+
+        result = self._msal_app.acquire_token_silent(
+            scopes=DEFAULT_SCOPES,
+            account=self._msal_account,
+        )
+
+        if result and "access_token" in result:
+            self.access_token = result["access_token"]
+            self.token_expires = time.time() + result.get("expires_in", 3600) - 60
+            self._save_msal_cache()
+            return True
+        return False
+
+    def acquire_token_device_code(self) -> bool:
+        """Acquire a token using device code flow (interactive).
+
+        Prints a URL and code to the console for the user to authenticate in a browser.
+        This is the recommended flow for CLI/headless applications.
+        """
+        if not self._msal_app:
+            if not self.client_id:
+                log.error("ms_graph_no_client_id")
+                return False
+            self._init_msal()
+
+        flow = self._msal_app.initiate_device_flow(scopes=DEFAULT_SCOPES)
+        if "user_code" not in flow:
+            log.error("ms_graph_device_flow_failed", error=flow.get("error_description", "Unknown error"))
+            return False
+
+        # Display the auth prompt
+        print("\n" + "=" * 60)
+        print("  Microsoft Graph Authentication Required")
+        print("=" * 60)
+        print(f"\n  {flow['message']}")
+        print("\n" + "=" * 60 + "\n")
+
+        result = self._msal_app.acquire_token_by_device_flow(flow)
+
+        if "access_token" in result:
+            self.access_token = result["access_token"]
+            self.token_expires = time.time() + result.get("expires_in", 3600) - 60
+            accounts = self._msal_app.get_accounts()
+            if accounts:
+                self._msal_account = accounts[0]
+            self._save_msal_cache()
+            log.info("ms_graph_device_code_success", username=self._msal_account.get("username", "") if self._msal_account else "")
+            return True
+        else:
+            log.error("ms_graph_device_code_failed", error=result.get("error_description", result.get("error", "Unknown")))
+            return False
+
     def save_token(self, token_response: dict) -> None:
-        """Save token response to disk."""
+        """Save token response to disk (legacy format for backward compatibility)."""
         TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
         self.access_token = token_response.get("access_token", "")
         self.refresh_token = token_response.get("refresh_token", self.refresh_token)
@@ -97,11 +213,15 @@ class MicrosoftGraphCredentials:
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.client_id)
+        return bool(self.client_id) and not self.client_id.startswith("YOUR_")
 
     @property
     def is_token_valid(self) -> bool:
         return bool(self.access_token) and time.time() < self.token_expires
+
+    @property
+    def has_cached_account(self) -> bool:
+        return self._msal_account is not None
 
 
 class MicrosoftGraphClient:
@@ -117,10 +237,26 @@ class MicrosoftGraphClient:
         self._client: httpx.AsyncClient | None = None
 
     async def initialize(self) -> bool:
-        """Initialize the client — load credentials, refresh token if needed."""
+        """Initialize the client — load credentials, acquire token via MSAL.
+
+        Token acquisition strategy:
+        1. Load config from disk
+        2. Try MSAL silent acquisition (cached token/refresh token)
+        3. Fall back to legacy refresh token if MSAL silent fails
+        4. Return True if we have a valid token, False otherwise
+           (Device code flow is NOT triggered here — use authenticate_interactive() for that)
+        """
         if not self.creds.load():
             return False
 
+        # Try MSAL silent first (handles refresh token automatically)
+        if self.creds.has_cached_account:
+            if self.creds.acquire_token_silent():
+                log.info("ms_graph_silent_auth_success")
+            else:
+                log.info("ms_graph_silent_auth_failed")
+
+        # Fall back to legacy refresh token
         if not self.creds.is_token_valid and self.creds.refresh_token:
             await self._refresh_token()
 
@@ -129,6 +265,36 @@ class MicrosoftGraphClient:
             headers=self._auth_headers(),
         )
         return self.creds.is_token_valid
+
+    async def authenticate_interactive(self) -> bool:
+        """Run device code flow for interactive authentication.
+
+        Call this from CLI scripts when the user needs to authenticate for the first time.
+        """
+        if not self.creds.load():
+            # Try to create template if no config exists
+            if not CRED_FILE.exists():
+                create_credentials_template()
+                print(f"\nPlease edit {CRED_FILE} with your Azure AD app credentials first.")
+                return False
+            return False
+
+        if not self.creds.is_configured:
+            print(f"\nPlease edit {CRED_FILE} with your Azure AD app credentials.")
+            return False
+
+        success = self.creds.acquire_token_device_code()
+        if success:
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(connect=10, read=30, write=30, pool=30),
+                headers=self._auth_headers(),
+            )
+            # Verify by calling /me
+            me = await self.get_me()
+            if me:
+                print(f"\nAuthenticated as: {me.get('displayName', 'Unknown')} ({me.get('mail', me.get('userPrincipalName', ''))})")
+                return True
+        return False
 
     def _auth_headers(self) -> dict:
         return {
@@ -165,9 +331,20 @@ class MicrosoftGraphClient:
                 return False
 
     async def _ensure_token(self) -> bool:
-        """Ensure we have a valid token before making requests."""
+        """Ensure we have a valid token before making requests.
+
+        Priority: MSAL silent → legacy refresh token → fail
+        """
         if self.creds.is_token_valid:
             return True
+
+        # Try MSAL silent refresh first
+        if self.creds.has_cached_account and self.creds.acquire_token_silent():
+            if self._client:
+                self._client.headers.update(self._auth_headers())
+            return True
+
+        # Fall back to legacy refresh token
         if self.creds.refresh_token:
             refreshed = await self._refresh_token()
             if refreshed and self._client:
@@ -617,18 +794,18 @@ def create_credentials_template() -> None:
 
     template = {
         "client_id": "YOUR_APP_CLIENT_ID",
-        "client_secret": "YOUR_APP_CLIENT_SECRET",
         "tenant_id": "common",
         "_setup_instructions": (
-            "1. Go to https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade\n"
+            "1. Go to https://portal.azure.com → Azure Active Directory → App registrations\n"
             "2. Click 'New registration'\n"
             "3. Name: 'Nellie Agent'\n"
-            "4. Supported account types: 'Accounts in any organizational directory and personal Microsoft accounts'\n"
-            "5. Redirect URI: http://localhost:8400/callback (Web)\n"
+            "4. Supported account types: 'Personal Microsoft accounts only' or 'Any org + personal'\n"
+            "5. Redirect URI: select 'Mobile and desktop' → https://login.microsoftonline.com/common/oauth2/nativeclient\n"
             "6. Copy Application (client) ID → client_id\n"
-            "7. Go to 'Certificates & secrets' → 'New client secret' → copy value → client_secret\n"
-            "8. Go to 'API permissions' → Add: Mail.Read, Mail.ReadWrite, Mail.Send, Calendars.Read, Files.Read, User.Read\n"
-            "9. Grant admin consent"
+            "7. Go to 'API permissions' → Add permissions → Microsoft Graph → Delegated:\n"
+            "   User.Read, Mail.ReadWrite, Mail.Send, Calendars.ReadWrite, Contacts.Read, Files.Read, Tasks.ReadWrite\n"
+            "8. Click 'Grant admin consent' if you're an admin\n"
+            "9. No client_secret needed — uses device code flow (public client)"
         ),
     }
     CRED_FILE.write_text(json.dumps(template, indent=2), encoding="utf-8")

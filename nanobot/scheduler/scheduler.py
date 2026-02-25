@@ -208,6 +208,14 @@ class BackgroundScheduler:
                     "enabled": False,
                 },
                 {
+                    "name": "msgraph-sync",
+                    "team": "msgraph-sync",
+                    "schedule_type": "cron",
+                    "expression": "*/60",
+                    "starting_message": "Sync Microsoft 365 data into the knowledge vault.",
+                    "enabled": False,
+                },
+                {
                     "name": "weekly-project-update",
                     "team": "project-updater",
                     "schedule_type": "cron",
