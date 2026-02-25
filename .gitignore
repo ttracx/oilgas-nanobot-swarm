@@ -45,3 +45,4 @@ nanobot_workspace/
 
 # API keys
 .nanobot_api_key
+.env
