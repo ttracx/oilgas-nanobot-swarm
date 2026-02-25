@@ -19,7 +19,7 @@ from nanobot.state.swarm_state import SwarmStateManager
 from nanobot.state.task_journal import TaskJournal
 from nanobot.state.connection import close_pool
 from nanobot.integrations.openclaw_connector import router as openclaw_router, set_swarm_instances
-from nanobot.api.knowledge_routes import router as knowledge_router
+from nanobot.api.knowledge_routes import router as knowledge_router, set_vector_store
 from nanobot.knowledge.graph_builder import graph_builder
 from nanobot.scheduler.scheduler import scheduler
 from nanobot.scheduler.agent_teams import get_team
@@ -27,6 +27,9 @@ from nanobot.tools.knowledge_tools import register_knowledge_tools
 from nanobot.tools.msgraph_tools import register_msgraph_tools
 from nanobot.tools.base import ToolRegistry
 from nanobot.integrations.microsoft_graph import ms_graph
+from nanobot.knowledge.vector_store import VaultVectorStore
+from nanobot.knowledge.file_watcher import VaultFileWatcher
+from nanobot.knowledge.vault import vault
 
 log = structlog.get_logger()
 
@@ -39,6 +42,8 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 hierarchical_swarm: HierarchicalSwarm | None = None
 flat_swarm: NanobotSwarm | None = None
 claude_runner: ClaudeTeamRunner | None = None
+vector_store: VaultVectorStore | None = None
+file_watcher: VaultFileWatcher | None = None
 state_manager = SwarmStateManager()
 
 
@@ -114,6 +119,41 @@ async def lifespan(app: FastAPI):
     graph_builder.start()
     log.info("graph_builder_started")
 
+    # Initialize vector store (local hash embeddings — no API key needed)
+    try:
+        vector_store = VaultVectorStore(vault.root)
+        loaded = vector_store.load()
+        if loaded == 0:
+            # First run — build the full index
+            stats = vector_store.index_all()
+            log.info("vector_store_built", **stats)
+        else:
+            log.info("vector_store_loaded", entries=loaded)
+        # Optionally upgrade to OpenAI embeddings
+        openai_key = os.getenv("OPENAI_API_KEY", "")
+        if openai_key:
+            vector_store.configure_openai(openai_key)
+            log.info("vector_store_upgraded_to_openai")
+    except Exception as e:
+        log.warning("vector_store_init_failed", error=str(e)[:100])
+        vector_store = None
+
+    # Expose vector store to knowledge routes
+    set_vector_store(vector_store)
+
+    # Start file watcher for vault changes
+    try:
+        file_watcher = VaultFileWatcher(
+            vault_path=vault.root,
+            vector_store=vector_store,
+            graph_invalidator=lambda: graph_builder.invalidate_cache(),
+        )
+        file_watcher.start()
+        log.info("file_watcher_started")
+    except Exception as e:
+        log.warning("file_watcher_init_failed", error=str(e)[:100])
+        file_watcher = None
+
     # Start background scheduler with swarm runner
     async def _swarm_runner(goal: str, mode: str, context: dict) -> dict:
         """Scheduler callback — routes to appropriate swarm backend.
@@ -155,6 +195,10 @@ async def lifespan(app: FastAPI):
 
     # Cleanup
     scheduler.stop()
+    if file_watcher:
+        file_watcher.stop()
+    if vector_store:
+        vector_store.save()
     graph_builder.stop()
     await ms_graph.close()
     await close_pool()

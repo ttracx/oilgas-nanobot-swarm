@@ -13,6 +13,8 @@ from typing import Any
 
 from anthropic import AsyncAnthropic
 
+from nanobot.knowledge.artifact_writer import process_agent_output
+
 from nanobot.core.agent import AgentConfig, AgentRole, AgentTask
 from nanobot.core.agent_claude import NanobotClaude
 from nanobot.tools.base import ToolRegistry
@@ -118,6 +120,14 @@ class ClaudeTeamRunner:
         result = await agent.execute(task)
         await agent.shutdown()
 
+        # Process artifacts and graph updates from agent output
+        extraction = process_agent_output(
+            result.output,
+            agent_id="claude-team-agent",
+            duration_ms=int(result.duration_seconds * 1000) if result.duration_seconds else 0,
+            tokens_used=result.tokens_used or 0,
+        ) if result.success else None
+
         return {
             "success": result.success,
             "session_id": session_id,
@@ -131,6 +141,8 @@ class ClaudeTeamRunner:
                 "tokens": result.tokens_used,
                 "duration": result.duration_seconds,
             }],
+            "artifacts_written": extraction.artifacts_written if extraction else 0,
+            "graph_updates_applied": extraction.graph_updates_applied if extraction else 0,
         }
 
     async def _run_hierarchical(self, goal: str, session_id: str, context: dict) -> dict:
@@ -259,11 +271,26 @@ class ClaudeTeamRunner:
         synth_result = await synthesizer.execute(synth_task)
         await synthesizer.shutdown()
 
+        final_answer = synth_result.output if synth_result.success else results_text
+
+        # Process artifacts and graph updates from all outputs
+        all_text = "\n\n".join([r["output"] for r in subtask_results] + [final_answer])
+        total_tokens = sum(r.get("tokens", 0) or 0 for r in subtask_results)
+        total_duration = sum(r.get("duration", 0) or 0 for r in subtask_results)
+        extraction = process_agent_output(
+            all_text,
+            agent_id="claude-hierarchical",
+            duration_ms=int(total_duration * 1000),
+            tokens_used=total_tokens,
+        )
+
         return {
             "success": synth_result.success and all_success,
             "session_id": session_id,
             "goal": goal,
             "plan_summary": plan_result.output[:200],
-            "final_answer": synth_result.output if synth_result.success else results_text,
+            "final_answer": final_answer,
             "subtask_results": subtask_results,
+            "artifacts_written": extraction.artifacts_written,
+            "graph_updates_applied": extraction.graph_updates_applied,
         }

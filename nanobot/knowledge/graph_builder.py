@@ -146,6 +146,15 @@ class GraphBuilder:
         """Wake the builder immediately (e.g., after a swarm completes)."""
         self._wake_event.set()
 
+    def invalidate_cache(self) -> None:
+        """Invalidate file hashes so next poll reprocesses everything.
+
+        Called by the VaultFileWatcher when vault files change externally.
+        """
+        self.state.file_hashes.clear()
+        self.wake()
+        log.info("graph_builder_cache_invalidated")
+
     async def _poll_loop(self) -> None:
         """Main polling loop — runs until stopped."""
         while self._running:

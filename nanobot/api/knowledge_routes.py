@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from nanobot.knowledge.vault import vault
 from nanobot.knowledge.graph_builder import graph_builder
+from nanobot.knowledge.vector_store import VaultVectorStore
 from nanobot.scheduler.scheduler import scheduler
 from nanobot.scheduler.agent_teams import list_teams, get_team, TEAM_REGISTRY
 from nanobot.integrations.microsoft_graph import ms_graph
@@ -140,6 +141,68 @@ async def rebuild_graph(_: str = Depends(verify_openclaw_key)):
     """Force a full knowledge graph rebuild."""
     index = await graph_builder.force_rebuild()
     return {"rebuilt": True, "index": index}
+
+
+# ── Vector Search Endpoints ──────────────────────────────────────────────
+
+# Lazy singleton — initialized by gateway at startup
+_vector_store: VaultVectorStore | None = None
+
+
+def set_vector_store(store: VaultVectorStore | None) -> None:
+    global _vector_store
+    _vector_store = store
+
+
+class VectorSearchRequest(BaseModel):
+    query: str
+    top_k: int = 10
+    type_filter: str | None = None
+    tag_filter: list[str] | None = None
+    hybrid: bool = True
+
+
+@router.get("/knowledge/vectors/stats")
+async def vector_stats(_: str = Depends(verify_openclaw_key)):
+    """Get vector store statistics."""
+    if not _vector_store:
+        return {"status": "not_initialized", "entry_count": 0}
+    return {**_vector_store.get_stats(), "status": "ready"}
+
+
+@router.post("/knowledge/vectors/search")
+async def vector_search(request: VectorSearchRequest, _: str = Depends(verify_openclaw_key)):
+    """Semantic search across the knowledge vault."""
+    if not _vector_store:
+        raise HTTPException(503, "Vector store not initialized")
+    if request.hybrid:
+        results = _vector_store.hybrid_search(
+            request.query, top_k=request.top_k,
+            type_filter=request.type_filter, tag_filter=request.tag_filter,
+        )
+    else:
+        results = _vector_store.search(
+            request.query, top_k=request.top_k,
+            type_filter=request.type_filter, tag_filter=request.tag_filter,
+        )
+    return {
+        "query": request.query,
+        "results": [
+            {"score": r.score, "path": r.path, "title": r.title,
+             "type": r.entity_type, "tags": r.tags, "snippet": r.snippet}
+            for r in results
+        ],
+        "count": len(results),
+    }
+
+
+@router.post("/knowledge/vectors/rebuild")
+async def vector_rebuild(_: str = Depends(verify_openclaw_key)):
+    """Force a full vector index rebuild."""
+    if not _vector_store:
+        raise HTTPException(503, "Vector store not initialized")
+    stats = _vector_store.index_all()
+    return {"rebuilt": True, **stats}
 
 
 # ── Scheduler Endpoints ──────────────────────────────────────────────────
