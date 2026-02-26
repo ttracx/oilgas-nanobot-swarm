@@ -569,6 +569,196 @@
     .footer-divider { border-top: 1px solid rgba(255,255,255,0.07); margin: 2rem auto 0; padding-top: 1.25rem; max-width: var(--nq-max-w); display: flex; justify-content: center; }
     .footer-bottom-copy { font-size: 0.72rem; color: rgba(255,255,255,0.25); text-align: center; }
 
+    /* ── Builder ─────────────────────────────────────────────────────── */
+    .builder-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1.25rem;
+    }
+    .builder-tab {
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid var(--nq-gray-200);
+      background: rgba(255,255,255,0.9);
+      color: var(--nq-gray-600);
+      transition: all 0.15s;
+    }
+    .builder-tab.active {
+      background: var(--nq-purple);
+      border-color: var(--nq-purple);
+      color: #fff;
+    }
+    .builder-tab:not(.active):hover {
+      border-color: rgba(123,31,162,0.4);
+      color: var(--nq-purple);
+    }
+    .builder-panel {
+      background: var(--nq-dark);
+      border: 1px solid rgba(123,31,162,0.3);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      margin-bottom: 3rem;
+      box-shadow: 0 8px 32px rgba(5,0,56,0.2);
+    }
+    .builder-bar {
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .builder-bar-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.6);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .builder-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--nq-cyan); animation: pulseGlow 2s infinite; }
+    .builder-input-area { padding: 14px 16px; display: flex; gap: 10px; }
+    #agent-input, #team-input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: rgba(255,255,255,0.9);
+      font-family: var(--nq-font-sans);
+      font-size: 0.88rem;
+      resize: none;
+      line-height: 1.55;
+      transition: border-color 0.2s;
+    }
+    #agent-input::placeholder, #team-input::placeholder { color: rgba(255,255,255,0.25); }
+    #agent-input:focus, #team-input:focus { outline: none; border-color: rgba(123,31,162,0.6); background: rgba(255,255,255,0.07); }
+    .builder-run-btn {
+      background: var(--nq-purple);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 22px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.88rem;
+      align-self: flex-end;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(123,31,162,0.35);
+      white-space: nowrap;
+    }
+    .builder-run-btn:hover { background: var(--nq-purple-hover); }
+    .builder-run-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .builder-result {
+      margin: 0 16px 16px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      display: none;
+    }
+    .builder-result.visible { display: block; }
+    .builder-result-tabs {
+      display: flex;
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .result-tab {
+      padding: 8px 16px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.45);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .result-tab.active { color: var(--nq-cyan); border-bottom-color: var(--nq-cyan); }
+    .result-tab:hover:not(.active) { color: rgba(255,255,255,0.7); }
+    .result-pane { display: none; }
+    .result-pane.active { display: block; }
+    .result-json, .result-code {
+      padding: 14px 16px;
+      font-family: var(--nq-font-mono);
+      font-size: 0.76rem;
+      color: #a5d6a7;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 380px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.2);
+    }
+    .result-code { color: #80cbc4; }
+    .result-summary {
+      padding: 14px 16px;
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.65;
+    }
+    .result-summary strong { color: #fff; }
+    .result-summary .tag {
+      display: inline-block;
+      background: rgba(123,31,162,0.2);
+      border: 1px solid rgba(123,31,162,0.4);
+      color: #c084fc;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      margin: 2px;
+    }
+    .copy-btn {
+      float: right;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6);
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 8px;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+    .builder-example-prompts {
+      padding: 0 16px 14px;
+    }
+    .example-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .example-chip {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.55);
+      font-size: 0.72rem;
+      padding: 4px 12px;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .example-chip:hover {
+      background: rgba(123,31,162,0.2);
+      border-color: rgba(123,31,162,0.45);
+      color: #c084fc;
+    }
+    .builder-status {
+      padding: 10px 16px;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.4);
+      font-family: var(--nq-font-mono);
+      min-height: 38px;
+    }
+
     /* ── Responsive ──────────────────────────────────────────────────── */
     @media (max-width: 640px) {
       nav ul { display: none; }
@@ -607,8 +797,9 @@
     <ul role="list">
       <li><a href="/" class="active" aria-current="page">Dashboard</a></li>
       <li><a href="#teams">Teams</a></li>
-      <li><a href="#tools">Tools</a></li>
       <li><a href="#console">Console</a></li>
+      <li><a href="#builder">Builder</a></li>
+      <li><a href="#tools">Tools</a></li>
       <li><a href="/docs" target="_blank" rel="noopener" class="nav-cta">API Docs</a></li>
     </ul>
   </div>
@@ -761,6 +952,107 @@
         <button id="run-btn" onclick="runSwarm()" aria-label="Run swarm task">&#9654; Run</button>
       </div>
       <div class="console-output" id="console-output" role="log" aria-live="polite" aria-label="Swarm output"></div>
+    </div>
+  </section>
+
+  <!-- ── Builder Section ─────────────────────────────────────────────── -->
+  <section id="builder" aria-labelledby="builder-heading">
+    <div class="section-head">
+      <span class="section-badge">AI Builder</span>
+      <h2 id="builder-heading" class="section-title">Swarm Agent &amp; Team Builder</h2>
+      <div class="section-divider" aria-hidden="true"></div>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="builder-tabs" role="tablist" aria-label="Builder type">
+      <button class="builder-tab active" id="tab-agent" role="tab" aria-selected="true"
+              aria-controls="panel-agent" onclick="switchBuilderTab('agent')">
+        &#9881; Agent Builder
+      </button>
+      <button class="builder-tab" id="tab-team" role="tab" aria-selected="false"
+              aria-controls="panel-team" onclick="switchBuilderTab('team')">
+        &#128101; Team Builder
+      </button>
+    </div>
+
+    <!-- Agent Builder Panel -->
+    <div id="panel-agent" role="tabpanel" aria-labelledby="tab-agent">
+      <div class="builder-panel">
+        <div class="builder-bar">
+          <div class="builder-bar-title">
+            <div class="builder-dot"></div>
+            Agent Builder — describe what your agent should do
+          </div>
+          <span style="font-size:0.72rem;color:rgba(255,255,255,0.3)">Generates config + Python code</span>
+        </div>
+        <div class="builder-example-prompts">
+          <div class="example-chips" id="agent-examples"></div>
+        </div>
+        <div class="builder-input-area">
+          <textarea id="agent-input" rows="4"
+            placeholder="Describe your agent... e.g. 'An agent that monitors wellbore pressure data, detects kick indicators, and automatically generates a well control action plan with calculations'"></textarea>
+          <button class="builder-run-btn" id="agent-btn" onclick="buildAgent()">&#9889; Generate</button>
+        </div>
+        <div class="builder-status" id="agent-status"></div>
+        <div class="builder-result" id="agent-result">
+          <div class="builder-result-tabs">
+            <button class="result-tab active" onclick="switchResultTab('agent','summary')">&#128196; Summary</button>
+            <button class="result-tab" onclick="switchResultTab('agent','code')">&#128187; Python Code</button>
+            <button class="result-tab" onclick="switchResultTab('agent','json')">&#123;&#125; JSON Config</button>
+          </div>
+          <div id="agent-pane-summary" class="result-pane active">
+            <div class="result-summary" id="agent-summary-content"></div>
+          </div>
+          <div id="agent-pane-code" class="result-pane">
+            <button class="copy-btn" onclick="copyContent('agent-code-content')">&#128203; Copy</button>
+            <div class="result-code" id="agent-code-content"></div>
+          </div>
+          <div id="agent-pane-json" class="result-pane">
+            <button class="copy-btn" onclick="copyContent('agent-json-content')">&#128203; Copy</button>
+            <div class="result-json" id="agent-json-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Builder Panel -->
+    <div id="panel-team" role="tabpanel" aria-labelledby="tab-team" style="display:none">
+      <div class="builder-panel">
+        <div class="builder-bar">
+          <div class="builder-bar-title">
+            <div class="builder-dot"></div>
+            Team Builder — describe the team you need
+          </div>
+          <span style="font-size:0.72rem;color:rgba(255,255,255,0.3)">Generates multi-agent team config + code</span>
+        </div>
+        <div class="builder-example-prompts">
+          <div class="example-chips" id="team-examples"></div>
+        </div>
+        <div class="builder-input-area">
+          <textarea id="team-input" rows="4"
+            placeholder="Describe your team... e.g. 'A team that analyzes production data every morning, identifies underperforming wells, runs decline curve analysis, and emails a prioritized workover recommendation report'"></textarea>
+          <button class="builder-run-btn" id="team-btn" onclick="buildTeam()">&#9889; Generate</button>
+        </div>
+        <div class="builder-status" id="team-status"></div>
+        <div class="builder-result" id="team-result">
+          <div class="builder-result-tabs">
+            <button class="result-tab active" onclick="switchResultTab('team','summary')">&#128196; Summary</button>
+            <button class="result-tab" onclick="switchResultTab('team','code')">&#128187; Python Code</button>
+            <button class="result-tab" onclick="switchResultTab('team','json')">&#123;&#125; JSON Config</button>
+          </div>
+          <div id="team-pane-summary" class="result-pane active">
+            <div class="result-summary" id="team-summary-content"></div>
+          </div>
+          <div id="team-pane-code" class="result-pane">
+            <button class="copy-btn" onclick="copyContent('team-code-content')">&#128203; Copy</button>
+            <div class="result-code" id="team-code-content"></div>
+          </div>
+          <div id="team-pane-json" class="result-pane">
+            <button class="copy-btn" onclick="copyContent('team-json-content')">&#128203; Copy</button>
+            <div class="result-json" id="team-json-content"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1013,6 +1305,227 @@
 
   checkHealth();
   setInterval(checkHealth, 30000);
+
+  /* ── Builder ───────────────────────────────────────────────────────── */
+  const AGENT_EXAMPLES = [
+    'Monitor wellbore pressure and detect kick indicators automatically',
+    'Analyze petrophysical logs and calculate water saturation with net pay cutoffs',
+    'Track daily drilling costs vs AFE and flag budget overruns',
+    'Review completions data and recommend refrac candidates',
+    'Audit HSE incidents and generate corrective action reports',
+    'Calculate pipeline MAOP and flag integrity anomalies',
+  ];
+
+  const TEAM_EXAMPLES = [
+    'Morning field briefing team that summarizes daily production and safety',
+    'Weekly well performance review with decline analysis and recommendations',
+    'Drilling ops team that monitors ECD and generates daily reports',
+    'Reservoir surveillance team that tracks pressure and waterflood performance',
+    'HSE compliance team that audits PSM elements and tracks corrective actions',
+    'Economics team that screens new well proposals with NPV and break-even',
+  ];
+
+  function buildChips(items, inputId, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    items.forEach(text => {
+      const chip = document.createElement('button');
+      chip.className = 'example-chip';
+      chip.textContent = text;
+      chip.addEventListener('click', () => {
+        const inp = document.getElementById(inputId);
+        if (inp) { inp.value = text; inp.focus(); }
+      });
+      container.appendChild(chip);
+    });
+  }
+  buildChips(AGENT_EXAMPLES, 'agent-input', 'agent-examples');
+  buildChips(TEAM_EXAMPLES, 'team-input', 'team-examples');
+
+  function switchBuilderTab(tab) {
+    ['agent', 'team'].forEach(t => {
+      const btn = document.getElementById('tab-' + t);
+      const panel = document.getElementById('panel-' + t);
+      if (btn)   { btn.classList.toggle('active', t === tab); btn.setAttribute('aria-selected', t === tab ? 'true' : 'false'); }
+      if (panel) { panel.style.display = t === tab ? 'block' : 'none'; }
+    });
+  }
+
+  function switchResultTab(builder, tab) {
+    const panel = document.getElementById(builder + '-result');
+    if (!panel) return;
+    const order = ['summary', 'code', 'json'];
+    panel.querySelectorAll('.result-tab').forEach((btn, i) => btn.classList.toggle('active', order[i] === tab));
+    panel.querySelectorAll('.result-pane').forEach((pane, i) => pane.classList.toggle('active', order[i] === tab));
+  }
+
+  function copyContent(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent).then(() => {
+      const btn = el.previousElementSibling;
+      if (btn) { btn.textContent = '\u2713 Copied!'; setTimeout(() => { btn.textContent = '\uD83D\uDCCB Copy'; }, 1500); }
+    }).catch(() => {});
+  }
+
+  function tryBuilderExample(goal) {
+    const inp = document.getElementById('goal-input');
+    if (inp) inp.value = goal;
+    document.getElementById('console').scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => { if (inp) inp.focus(); }, 400);
+  }
+
+  /* DOM helpers — safe, no innerHTML on user/AI data */
+  function mkEl(tag, styles, text) {
+    const e = document.createElement(tag);
+    if (styles) Object.assign(e.style, styles);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function mkTag(text) {
+    const s = document.createElement('span');
+    s.className = 'tag';
+    s.textContent = text;
+    return s;
+  }
+
+  function clearEl(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
+  function renderBuilderSummary(config, type, targetId) {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    clearEl(el);
+
+    if (config.parse_error) {
+      el.appendChild(mkEl('p', null, 'Could not parse structured output. Check the JSON tab for raw output.'));
+      return;
+    }
+
+    // Header: name + tags
+    const hdr = mkEl('div', { marginBottom: '12px' });
+    hdr.appendChild(mkEl('strong', { fontSize: '1rem', display: 'block', marginBottom: '4px' }, config.name || 'unnamed'));
+    hdr.appendChild(mkTag(config.mode || 'hierarchical'));
+    if (config.temperature !== undefined) hdr.appendChild(mkTag('temp: ' + config.temperature));
+    if (config.max_tokens) hdr.appendChild(mkTag(config.max_tokens + ' tokens'));
+    el.appendChild(hdr);
+
+    // Description
+    if (config.description) {
+      el.appendChild(mkEl('div', { marginBottom: '10px', color: 'rgba(255,255,255,0.7)' }, config.description));
+    }
+
+    // Agents (team only)
+    if (type === 'team' && Array.isArray(config.agents) && config.agents.length) {
+      const wrap = mkEl('div', { marginBottom: '10px' });
+      wrap.appendChild(mkEl('strong', null, 'Agents:'));
+      const ul = document.createElement('ul');
+      ul.style.cssText = 'margin:4px 0 0 16px;line-height:1.8';
+      config.agents.forEach(a => ul.appendChild(mkEl('li', null, (a.role || '') + ' \u2014 ' + (a.purpose || ''))));
+      wrap.appendChild(ul);
+      el.appendChild(wrap);
+    }
+
+    // Tools
+    const tools = Array.isArray(config.tools) ? config.tools.join(', ') : '';
+    if (tools) {
+      const tw = mkEl('div', { marginBottom: '10px' });
+      tw.appendChild(mkEl('strong', null, 'Tools: '));
+      tw.appendChild(mkEl('span', { color: 'rgba(255,255,255,0.6)' }, tools));
+      el.appendChild(tw);
+    }
+
+    // Use cases
+    if (Array.isArray(config.use_cases) && config.use_cases.length) {
+      const uw = mkEl('div', { marginBottom: '10px' });
+      uw.appendChild(mkEl('strong', null, 'Use cases:'));
+      const ul = document.createElement('ul');
+      ul.style.cssText = 'margin:4px 0 0 16px;line-height:1.8';
+      config.use_cases.forEach(u => ul.appendChild(mkEl('li', { color: 'rgba(255,255,255,0.65)' }, u)));
+      uw.appendChild(ul);
+      el.appendChild(uw);
+    }
+
+    // Schedule (team only)
+    if (config.schedule_example) {
+      const sw = mkEl('div', { marginBottom: '10px' });
+      sw.appendChild(mkEl('strong', null, 'Schedule: '));
+      sw.appendChild(mkEl('code', { color: 'var(--nq-cyan)', fontFamily: 'var(--nq-font-mono)' }, config.schedule_example));
+      el.appendChild(sw);
+    }
+
+    // Example goal box
+    if (config.example_goal) {
+      const box = mkEl('div', {
+        marginTop: '12px', padding: '10px',
+        background: 'rgba(255,255,255,0.05)', borderRadius: '6px',
+        borderLeft: '3px solid var(--nq-cyan)',
+      });
+      box.appendChild(mkEl('div', { fontSize: '0.7rem', color: 'var(--nq-cyan)', fontWeight: '700', marginBottom: '4px' }, 'EXAMPLE GOAL'));
+      box.appendChild(mkEl('div', { fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }, config.example_goal));
+
+      const tryBtn = mkEl('button', {
+        marginTop: '8px', background: 'rgba(92,225,230,0.1)',
+        border: '1px solid rgba(92,225,230,0.3)', color: 'var(--nq-cyan)',
+        borderRadius: '6px', padding: '4px 12px', fontSize: '0.72rem', cursor: 'pointer',
+      }, '\u25B6 Try in Console');
+      const goalText = config.example_goal;
+      tryBtn.addEventListener('click', () => tryBuilderExample(goalText));
+      box.appendChild(tryBtn);
+      el.appendChild(box);
+    }
+  }
+
+  async function runBuilder(type) {
+    const inputId = type + '-input';
+    const btnId   = type + '-btn';
+    const statusId = type + '-status';
+    const resultId = type + '-result';
+
+    const desc = document.getElementById(inputId).value.trim();
+    if (!desc) { document.getElementById(statusId).textContent = 'Enter a description first.'; return; }
+
+    const btn    = document.getElementById(btnId);
+    const status = document.getElementById(statusId);
+    const resultEl = document.getElementById(resultId);
+
+    btn.disabled = true;
+    btn.textContent = 'Generating\u2026';
+    status.textContent = type === 'agent' ? 'Analyzing and generating agent config\u2026' : 'Designing agent team architecture\u2026';
+    resultEl.classList.remove('visible');
+
+    try {
+      const resp = await fetch('/' + type + '/build', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: desc }),
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      const config = data.config || {};
+
+      renderBuilderSummary(config, type, type + '-summary-content');
+
+      const codeEl = document.getElementById(type + '-code-content');
+      const jsonEl = document.getElementById(type + '-json-content');
+      if (codeEl) codeEl.textContent = config.python_code || '# No Python code generated';
+      if (jsonEl) jsonEl.textContent = JSON.stringify(config, null, 2);
+
+      resultEl.classList.add('visible');
+      switchResultTab(type, 'summary');
+      status.textContent = 'Generated in ' + data.duration_seconds + 's \u2014 powered by NeuralQuantum.ai';
+      resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) {
+      status.textContent = 'Error: ' + e.message + ' \u2014 please try again.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '\u26A1 Generate';
+    }
+  }
+
+  function buildAgent() { runBuilder('agent'); }
+  function buildTeam()  { runBuilder('team');  }
+
 </script>
 </body>
 </html>

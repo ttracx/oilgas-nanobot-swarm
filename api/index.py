@@ -179,3 +179,148 @@ async def topology():
     return {"tiers": 3, "l0": "queen",
             "l1_roles": ["coder", "researcher", "analyst", "validator", "executor", "architect"]}
 
+
+# ── Agent Builder ──────────────────────────────────────────────────────────────
+
+AGENT_BUILDER_SYSTEM = """You are an expert AI agent architect specializing in oil and gas engineering agents for the NeuralQuantum.ai OilGas Nanobot Swarm platform.
+
+Given a user's description of what they want an agent to do, you MUST respond with ONLY valid JSON — no markdown fences, no explanation, just the raw JSON object.
+
+The JSON must have exactly these fields:
+{
+  "name": "kebab-case-name",
+  "description": "One sentence description for the dashboard",
+  "mode": "hierarchical" or "flat",
+  "tools": ["list", "of", "tools", "the", "agent", "needs"],
+  "system_prompt": "Detailed multi-line system prompt for the agent...",
+  "temperature": 0.1,
+  "max_tokens": 4096,
+  "python_code": "Complete ready-to-paste Python code using register_team(AgentTeam(...))",
+  "use_cases": ["Use case 1", "Use case 2", "Use case 3"],
+  "example_goal": "A realistic example goal string for this agent"
+}
+
+Available tools: reservoir_pressure_calc, drilling_engineering_calc, production_engineering_calc, pipeline_hydraulics_calc, well_control_calc, formation_evaluation_calc, oilgas_regulatory_reference, web_search, code_runner, file_io, http_fetch, knowledge_tools, vault_memory
+
+Rules:
+- name: lowercase, hyphens only, descriptive
+- mode: "flat" for simple reporting/summaries, "hierarchical" for complex multi-step analysis
+- system_prompt: detailed, include workflow steps numbered 1-N, output format section
+- temperature: 0.0-0.1 for calculations, 0.2-0.3 for reports
+- python_code: must be complete, importable, copy-paste ready"""
+
+
+TEAM_BUILDER_SYSTEM = """You are an expert AI swarm architect specializing in multi-agent teams for oil and gas engineering on the NeuralQuantum.ai OilGas Nanobot Swarm platform.
+
+Given a user's description, respond with ONLY valid JSON — no markdown fences, no explanation, just the raw JSON object.
+
+The JSON must have exactly these fields:
+{
+  "name": "kebab-case-team-name",
+  "description": "One sentence description",
+  "mode": "hierarchical" or "flat",
+  "agents": [
+    {
+      "role": "L1 role name (coder/researcher/analyst/validator/executor/architect)",
+      "purpose": "What this agent does in the team",
+      "l2_agents": ["list of L2 sub-agent roles if hierarchical"]
+    }
+  ],
+  "orchestration": "Description of how agents coordinate",
+  "system_prompt": "Team-level system prompt with full workflow",
+  "tools": ["tools", "needed"],
+  "temperature": 0.1,
+  "max_tokens": 4096,
+  "python_code": "Complete register_team(AgentTeam(...)) Python code",
+  "schedule_example": "cron expression or interval e.g. '07:00' or '*/6' or 'monday 08:00'",
+  "use_cases": ["Use case 1", "Use case 2"],
+  "example_goal": "A realistic example goal string"
+}
+
+Rules:
+- Hierarchical teams: 2-5 L1 agents, each with 2-4 L2 sub-agents
+- Flat teams: direct agent execution, best for reporting and summaries
+- system_prompt: start with role description, numbered workflow steps, output format
+- python_code: complete, importable"""
+
+
+class BuilderRequest(BaseModel):
+    description: str = Field(..., min_length=10, max_length=2000,
+                              description="Describe what you want the agent/team to do")
+
+
+@app.post("/agent/build")
+async def build_agent(req: BuilderRequest):
+    """Generate a custom agent config from a natural language description."""
+    msgs = [
+        {"role": "system", "content": AGENT_BUILDER_SYSTEM},
+        {"role": "user", "content": f"Create an agent for: {req.description}"},
+    ]
+    t0 = time.time()
+    raw, _ = await _chat(msgs, max_tokens=3000)
+
+    # Strip markdown fences if model added them despite instructions
+    text = raw.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+    try:
+        config = _json.loads(text)
+    except _json.JSONDecodeError:
+        # Try to extract JSON object from text
+        import re
+        m = re.search(r'\{[\s\S]*\}', text)
+        if m:
+            try:
+                config = _json.loads(m.group())
+            except Exception:
+                config = {"raw_output": raw, "parse_error": "Could not parse JSON — copy raw output"}
+        else:
+            config = {"raw_output": raw, "parse_error": "Could not parse JSON — copy raw output"}
+
+    return {
+        "success": True,
+        "type": "agent",
+        "config": config,
+        "duration_seconds": round(time.time() - t0, 2),
+        "powered_by": "NeuralQuantum.ai",
+    }
+
+
+@app.post("/team/build")
+async def build_team(req: BuilderRequest):
+    """Generate a custom agent team config from a natural language description."""
+    msgs = [
+        {"role": "system", "content": TEAM_BUILDER_SYSTEM},
+        {"role": "user", "content": f"Create an agent team for: {req.description}"},
+    ]
+    t0 = time.time()
+    raw, _ = await _chat(msgs, max_tokens=3000)
+
+    text = raw.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+    try:
+        config = _json.loads(text)
+    except _json.JSONDecodeError:
+        import re
+        m = re.search(r'\{[\s\S]*\}', text)
+        if m:
+            try:
+                config = _json.loads(m.group())
+            except Exception:
+                config = {"raw_output": raw, "parse_error": "Could not parse JSON — copy raw output"}
+        else:
+            config = {"raw_output": raw, "parse_error": "Could not parse JSON — copy raw output"}
+
+    return {
+        "success": True,
+        "type": "team",
+        "config": config,
+        "duration_seconds": round(time.time() - t0, 2),
+        "powered_by": "NeuralQuantum.ai",
+    }
+
