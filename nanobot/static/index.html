@@ -2,7 +2,11 @@
 <html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#050038" />
   <title>OilGas Nanobot Swarm — NeuralQuantum.ai</title>
   <meta name="description" content="Hierarchical AI Agent Swarm for Oil & Gas Engineering — powered by VibeCaaS.com, a division of NeuralQuantum.ai LLC" />
   <style>
@@ -760,12 +764,176 @@
     }
 
     /* ── Responsive ──────────────────────────────────────────────────── */
+    /* ── Mobile-first responsive overrides ───────────────────────────── */
+
+    /* Tablet: 768px and below */
+    @media (max-width: 768px) {
+      .content { padding: 1.5rem 1rem; }
+
+      /* Status bar: 2-column on tablet */
+      .status-bar { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 2rem; }
+
+      /* Teams: 2 columns */
+      .teams-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+      /* Tools: 2 columns */
+      .tools-grid { grid-template-columns: repeat(2, 1fr); }
+
+      /* Builder tabs: smaller */
+      .builder-tab { padding: 7px 14px; font-size: 0.82rem; }
+    }
+
+    /* Mobile: 640px and below */
     @media (max-width: 640px) {
+
+      /* ── Nav: hide links, show hamburger ─────────────────────── */
+      nav { height: 56px; padding: 0 1rem; }
       nav ul { display: none; }
-      .hero { padding: 3rem 1rem 2.5rem; }
-      .footer-inner { grid-template-columns: 1fr; }
+      nav ul.open {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 56px; left: 0; right: 0;
+        background: rgba(255,255,255,0.97);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--nq-gray-200);
+        padding: 12px 1rem 16px;
+        gap: 2px;
+        z-index: 99;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      }
+      nav ul.open a {
+        padding: 11px 14px;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+      }
+      .nav-hamburger {
+        display: flex !important;
+        flex-direction: column;
+        justify-content: center;
+        gap: 5px;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        padding: 6px;
+        border-radius: 8px;
+        flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .nav-hamburger span {
+        display: block;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--nq-gray-700);
+        transition: all 0.2s;
+      }
+      .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+      .nav-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+      .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+      .nav-wordmark .w-sub { display: none; }
+
+      /* ── Hero ────────────────────────────────────────────────── */
+      .hero { padding: 2.5rem 1rem 2rem; }
+      .hero h1 { font-size: clamp(1.5rem, 6vw, 2rem); }
+      .hero-subtitle { font-size: 0.9rem; }
+      .hero-actions { flex-direction: column; align-items: stretch; }
+      .hero-actions .btn { justify-content: center; padding: 0.875rem 1.5rem; min-height: 48px; }
+
+      /* ── Content ─────────────────────────────────────────────── */
+      .content { padding: 1.25rem 1rem; }
+
+      /* ── Quick links ─────────────────────────────────────────── */
+      .quick-links { gap: 6px; }
+      .q-badge { font-size: 0.73rem; padding: 5px 10px; }
+
+      /* ── Status bar: 2 columns ───────────────────────────────── */
+      .status-bar { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1.75rem; }
+      .status-card { padding: 12px; }
+      .status-icon { width: 30px; height: 30px; }
+      .status-text-value { font-size: 0.82rem; }
+
+      /* ── Section heads ───────────────────────────────────────── */
+      .section-head { margin-bottom: 1rem; }
+      .section-title { font-size: 1.1rem; }
+      .section-divider { display: none; }
+
+      /* ── Team cards: single column ───────────────────────────── */
+      .teams-grid { grid-template-columns: 1fr; gap: 10px; margin-bottom: 2rem; }
+      .team-card { padding: 14px; }
+      .team-hint { display: none; }
+
+      /* ── Console ─────────────────────────────────────────────── */
+      .console-input-area { flex-direction: column; gap: 8px; padding: 12px; }
+      #goal-input { font-size: 0.9rem; padding: 12px; min-height: 100px; }
+      #run-btn {
+        width: 100%;
+        padding: 14px;
+        font-size: 0.95rem;
+        min-height: 48px;
+        align-self: stretch;
+        border-radius: 8px;
+      }
+      .console-output { font-size: 0.75rem; padding: 0 12px 12px; }
+
+      /* ── Builder ─────────────────────────────────────────────── */
+      .builder-tabs { gap: 6px; }
+      .builder-tab { flex: 1; text-align: center; padding: 10px 8px; font-size: 0.8rem; min-height: 44px; }
+      .builder-input-area { flex-direction: column; gap: 8px; padding: 12px; }
+      #agent-input, #team-input {
+        font-size: 0.9rem;
+        padding: 12px;
+        min-height: 100px;
+      }
+      .builder-run-btn {
+        width: 100%;
+        padding: 14px;
+        font-size: 0.95rem;
+        min-height: 48px;
+        align-self: stretch;
+        border-radius: 8px;
+      }
+      .builder-result-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .result-tab { white-space: nowrap; min-height: 40px; padding: 8px 14px; }
+      .result-json, .result-code { font-size: 0.72rem; max-height: 260px; }
+      .example-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+      .example-chip { flex-shrink: 0; font-size: 0.7rem; }
+      .copy-btn { float: none; display: block; width: 100%; margin-bottom: 6px; min-height: 36px; }
+
+      /* ── Tools ───────────────────────────────────────────────── */
+      .tools-grid { grid-template-columns: 1fr; gap: 8px; }
+
+      /* ── Footer ──────────────────────────────────────────────── */
+      footer { padding: 0 1rem; }
+      .footer-inner { grid-template-columns: 1fr; gap: 1rem; padding: 1.25rem 0; }
       .footer-links { align-items: flex-start; }
       .footer-links-row { flex-wrap: wrap; gap: 10px; }
+      .footer-copy { font-size: 0.74rem; }
+      .footer-divider { margin-top: 1rem; padding-top: 1rem; flex-direction: column; gap: 8px; }
+      .footer-divider > div { flex-direction: column; text-align: center; gap: 4px; }
+    }
+
+    /* Very small screens: 380px */
+    @media (max-width: 380px) {
+      .hero h1 { font-size: 1.4rem; }
+      .status-bar { grid-template-columns: 1fr; }
+      .builder-tabs { flex-direction: column; }
+    }
+
+    /* Touch: increase tap targets globally */
+    @media (hover: none) and (pointer: coarse) {
+      nav ul a,
+      .nav-cta { min-height: 44px; display: flex; align-items: center; }
+      .team-card { cursor: default; }
+      .team-card:active { transform: scale(0.98); border-color: rgba(123,31,162,0.5); }
+      .btn { min-height: 48px; }
+      .builder-tab, .result-tab { min-height: 44px; }
+      .q-badge { min-height: 36px; display: inline-flex; align-items: center; }
     }
   </style>
 </head>
@@ -794,14 +962,19 @@
       </div>
     </a>
 
-    <ul role="list">
-      <li><a href="/" class="active" aria-current="page">Dashboard</a></li>
-      <li><a href="#teams">Teams</a></li>
-      <li><a href="#console">Console</a></li>
-      <li><a href="#builder">Builder</a></li>
-      <li><a href="#tools">Tools</a></li>
-      <li><a href="/docs" target="_blank" rel="noopener" class="nav-cta">API Docs</a></li>
+    <ul role="list" id="nav-menu">
+      <li><a href="/" aria-current="page" onclick="closeNav()">Dashboard</a></li>
+      <li><a href="#teams" onclick="closeNav()">Teams</a></li>
+      <li><a href="#console" onclick="closeNav()">Console</a></li>
+      <li><a href="#builder" onclick="closeNav()">Builder</a></li>
+      <li><a href="#tools" onclick="closeNav()">Tools</a></li>
+      <li><a href="/docs" target="_blank" rel="noopener" class="nav-cta" onclick="closeNav()">API Docs</a></li>
     </ul>
+    <button class="nav-hamburger" id="nav-toggle" style="display:none"
+            aria-label="Toggle navigation" aria-expanded="false"
+            aria-controls="nav-menu" onclick="toggleNav()">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
 
@@ -1298,6 +1471,47 @@
       setStatus('dot-redis',   'stat-redis',   'dot-gray', '—');
     }
   }
+
+  /* ── Mobile nav ─────────────────────────────────────────────────────── */
+  const navToggle = document.getElementById('nav-toggle');
+  const navMenu   = document.getElementById('nav-menu');
+
+  function showHamburger() {
+    if (navToggle) navToggle.style.display = 'flex';
+  }
+  function hideHamburger() {
+    if (navToggle) navToggle.style.display = 'none';
+    closeNav();
+  }
+
+  function toggleNav() {
+    const open = navMenu.classList.toggle('open');
+    navToggle.classList.toggle('open', open);
+    navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+
+  function closeNav() {
+    navMenu.classList.remove('open');
+    if (navToggle) { navToggle.classList.remove('open'); navToggle.setAttribute('aria-expanded', 'false'); }
+    document.body.style.overflow = '';
+  }
+
+  // Show/hide hamburger based on viewport
+  const mq = window.matchMedia('(max-width: 640px)');
+  function onMQ(e) { e.matches ? showHamburger() : hideHamburger(); }
+  mq.addEventListener('change', onMQ);
+  onMQ(mq);
+
+  // Close menu on outside click
+  document.addEventListener('click', e => {
+    if (navMenu.classList.contains('open') && !navMenu.contains(e.target) && e.target !== navToggle && !navToggle.contains(e.target)) {
+      closeNav();
+    }
+  });
+
+  // Close menu on escape key
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
 
   /* ── Init ─────────────────────────────────────────────────────────────── */
   log('OilGas Nanobot Swarm — powered by NeuralQuantum.ai', 'c-prompt');
