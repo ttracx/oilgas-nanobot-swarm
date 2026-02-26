@@ -125,13 +125,14 @@
     }
     .nav-logo-icon {
       width: 32px; height: 32px;
-      background: linear-gradient(135deg, var(--nq-purple), var(--nq-cyan));
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
       animation: quantum-wave 4s ease-in-out infinite;
     }
+    .nav-logo-icon img { width: 32px; height: 32px; object-fit: contain; }
     .nav-logo-icon svg { width: 18px; height: 18px; color: white; }
     .nav-wordmark {
       font-size: 1.1rem;
@@ -521,10 +522,11 @@
     }
     .footer-logo {
       width: 28px; height: 28px;
-      background: linear-gradient(135deg, var(--nq-purple), var(--nq-cyan));
       border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
     }
+    .footer-logo img { width: 28px; height: 28px; object-fit: contain; }
     .footer-logo svg { width: 14px; height: 14px; color: #fff; }
     .footer-wordmark { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; }
     .footer-wordmark .fw-neural  { color: #fff; }
@@ -575,7 +577,9 @@
   <div class="nav-inner">
     <a href="/" class="nav-brand" aria-label="OilGas Nanobot Swarm Home">
       <div class="nav-logo-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <img src="https://neuralquantum.ai/logo.png" alt="NeuralQuantum.ai"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+        <svg style="display:none" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2L2 7l10 5 10-5-10-5z"/>
           <path d="M2 17l10 5 10-5"/>
           <path d="M2 12l10 5 10-5"/>
@@ -618,7 +622,7 @@
         Run a Swarm Task
       </a>
       <a href="/docs" target="_blank" rel="noopener" class="btn btn-outline">API Reference</a>
-      <a href="https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm" target="_blank" rel="noopener" class="btn btn-outline">GitHub</a>
+      <a href="https://github.com/ttracx/oilgas-nanobot-swarm" target="_blank" rel="noopener" class="btn btn-outline">GitHub</a>
     </div>
   </div>
 </section>
@@ -640,7 +644,7 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Session History
     </a>
-    <a href="https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm" target="_blank" rel="noopener" class="q-badge q-badge-cyan">
+    <a href="https://github.com/ttracx/oilgas-nanobot-swarm" target="_blank" rel="noopener" class="q-badge q-badge-cyan">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
       Source Code
     </a>
@@ -765,7 +769,9 @@
     <div>
       <div class="footer-brand">
         <div class="footer-logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <img src="https://neuralquantum.ai/logo.png" alt="NeuralQuantum.ai"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+          <svg style="display:none" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z"/>
             <path d="M2 17l10 5 10-5"/>
             <path d="M2 12l10 5 10-5"/>
@@ -777,7 +783,11 @@
       </div>
       <div class="footer-copy">
         &copy; 2026 <strong style="color:rgba(255,255,255,0.7)">OilGas Nanobot Swarm</strong> powered by
-        <a href="https://vibecaas.com" target="_blank" rel="noopener">VibeCaaS.com</a>
+        <a href="https://vibecaas.com" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;vertical-align:middle">
+          <img src="https://neuralquantum.ai/logo.png" alt="" width="16" height="16" style="border-radius:3px;object-fit:contain"
+               onerror="this.style.display='none'" />
+          VibeCaaS.com
+        </a>
         a division of <a href="https://neuralquantum.ai" target="_blank" rel="noopener">NeuralQuantum.ai LLC</a>.
         All rights reserved.
       </div>
@@ -790,7 +800,7 @@
         <a href="/swarm/topology">Topology</a>
       </div>
       <div class="footer-links-row">
-        <a href="https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/ttracx/oilgas-nanobot-swarm" target="_blank" rel="noopener">GitHub</a>
         <a href="https://neuralquantum.ai" target="_blank" rel="noopener">NeuralQuantum.ai</a>
         <a href="https://vibecaas.com" target="_blank" rel="noopener">VibeCaaS.com</a>
       </div>

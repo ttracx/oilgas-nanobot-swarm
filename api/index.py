@@ -17,7 +17,6 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import anthropic
-from mangum import Mangum
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL   = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
@@ -217,4 +216,6 @@ async def topology():
             "l1_roles": ["coder", "researcher", "analyst", "validator", "executor", "architect"]}
 
 
-handler = Mangum(app, lifespan="auto")
+# Vercel @vercel/python has native ASGI support — export `app` directly.
+# (Mangum is for AWS Lambda only; not needed on Vercel)
+handler = app
