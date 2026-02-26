@@ -389,6 +389,7 @@
     .team-hint { font-size: 0.72rem; color: var(--nq-gray-400); margin-top: 0.5rem; display: flex; align-items: center; gap: 4px; }
 
     /* ── Console Panel ───────────────────────────────────────────────── */
+    /* ── Console ─────────────────────────────────────────────────────── */
     .console-panel {
       background: var(--nq-dark);
       border: 1px solid rgba(123,31,162,0.3);
@@ -396,18 +397,82 @@
       overflow: hidden;
       margin-bottom: 3rem;
       box-shadow: 0 8px 32px rgba(5,0,56,0.2);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
     }
+    /* Expanded state — taller inline */
+    .console-panel.expanded {
+      border-color: rgba(123,31,162,0.6);
+      box-shadow: 0 16px 48px rgba(5,0,56,0.35);
+    }
+    .console-panel.expanded #goal-input { min-height: 120px; }
+    .console-panel.expanded .console-output { max-height: 520px; min-height: 120px; }
+
+    /* Fullscreen overlay */
+    .console-panel.fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      border-radius: 0;
+      border: none;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      box-shadow: none;
+    }
+    .console-panel.fullscreen #goal-input {
+      min-height: 100px;
+      font-size: 0.92rem;
+    }
+    .console-panel.fullscreen .console-output {
+      flex: 1;
+      max-height: none;
+      font-size: 0.84rem;
+      padding: 8px 20px 20px;
+    }
+    .console-panel.fullscreen .console-input-area { padding: 14px 20px; }
+    /* Dim the page behind fullscreen */
+    .console-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(5,0,56,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 199;
+    }
+    .console-backdrop.visible { display: block; }
+
     .console-titlebar {
       background: rgba(255,255,255,0.04);
       border-bottom: 1px solid rgba(255,255,255,0.08);
-      padding: 10px 16px;
+      padding: 10px 12px 10px 16px;
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-shrink: 0;
     }
     .console-dot { width: 11px; height: 11px; border-radius: 50%; }
-    .console-label { font-size: 0.78rem; color: rgba(255,255,255,0.35); margin-left: 8px; font-family: var(--nq-font-mono); }
-    .console-input-area { display: flex; gap: 10px; padding: 14px 16px; }
+    .console-label { font-size: 0.78rem; color: rgba(255,255,255,0.35); margin-left: 8px; font-family: var(--nq-font-mono); flex: 1; }
+    /* Console control buttons */
+    .console-controls { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+    .console-ctrl-btn {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      color: rgba(255,255,255,0.4);
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .console-ctrl-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.25); }
+    .console-ctrl-btn svg { width: 14px; height: 14px; }
+    .console-clear-btn { font-size: 0.7rem; font-weight: 600; width: auto; padding: 0 8px; letter-spacing: 0.02em; }
+
+    .console-input-area { display: flex; gap: 10px; padding: 14px 16px; flex-shrink: 0; }
     #goal-input {
       flex: 1;
       background: rgba(255,255,255,0.05);
@@ -449,6 +514,7 @@
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-word;
+      scroll-behavior: smooth;
     }
     .c-prompt { color: var(--nq-cyan); }
     .c-info  { color: #64b5f6; }
@@ -871,6 +937,12 @@
         border-radius: 8px;
       }
       .console-output { font-size: 0.75rem; padding: 0 12px 12px; }
+      .console-panel.fullscreen {
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .console-panel.fullscreen .console-input-area { padding: 10px 12px; flex-direction: column; }
+      .console-panel.fullscreen #run-btn { width: 100%; min-height: 48px; }
 
       /* ── Builder ─────────────────────────────────────────────── */
       .builder-tabs { gap: 6px; }
@@ -1101,12 +1173,29 @@
       <h2 id="console-heading" class="section-title">Swarm Console</h2>
       <div class="section-divider" aria-hidden="true"></div>
     </div>
-    <div class="console-panel" role="region" aria-label="Swarm task console">
-      <div class="console-titlebar" aria-hidden="true">
-        <div class="console-dot" style="background:#ef4444"></div>
-        <div class="console-dot" style="background:#eab308"></div>
-        <div class="console-dot" style="background:#22c55e"></div>
-        <span class="console-label">nanobot-swarm gateway v2.0 — NeuralQuantum.ai</span>
+    <!-- Fullscreen backdrop -->
+    <div class="console-backdrop" id="console-backdrop" onclick="exitConsoleFullscreen()"></div>
+
+    <div class="console-panel" id="console-panel" role="region" aria-label="Swarm task console">
+      <div class="console-titlebar">
+        <div class="console-dot" style="background:#ef4444" aria-hidden="true"></div>
+        <div class="console-dot" style="background:#eab308" aria-hidden="true"></div>
+        <div class="console-dot" style="background:#22c55e" aria-hidden="true"></div>
+        <span class="console-label" id="console-label">nanobot-swarm — NeuralQuantum.ai</span>
+        <div class="console-controls" role="toolbar" aria-label="Console controls">
+          <button class="console-ctrl-btn console-clear-btn" onclick="clearConsole()" title="Clear output" aria-label="Clear console output">CLR</button>
+          <button class="console-ctrl-btn" id="expand-btn" onclick="toggleExpand()" title="Expand console" aria-label="Expand console">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+              <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+          </button>
+          <button class="console-ctrl-btn" id="fullscreen-btn" onclick="toggleConsoleFullscreen()" title="Fullscreen" aria-label="Toggle fullscreen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="fullscreen-icon">
+              <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="console-input-area">
         <textarea
@@ -1396,6 +1485,85 @@
     document.getElementById('console').scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => document.getElementById('goal-input').focus(), 400);
   }
+
+  /* ── Console expand / fullscreen / clear ──────────────────────────────── */
+  const consolePanel    = document.getElementById('console-panel');
+  const consoleBackdrop = document.getElementById('console-backdrop');
+  const expandBtn       = document.getElementById('expand-btn');
+  const fullscreenBtn   = document.getElementById('fullscreen-btn');
+  const fsIcon          = document.getElementById('fullscreen-icon');
+
+  let _expanded   = false;
+  let _fullscreen = false;
+
+  function _setSvg(btn, d) {
+    const svg = btn ? btn.querySelector('svg') : null;
+    if (svg) svg.innerHTML = d;
+  }
+
+  function _updateExpandIcon() {
+    const d = _expanded
+      ? '<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>'
+      : '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>';
+    _setSvg(expandBtn, d);
+    if (expandBtn) { expandBtn.title = _expanded ? 'Collapse' : 'Expand'; expandBtn.setAttribute('aria-label', expandBtn.title); }
+  }
+
+  function _updateFsIcon() {
+    const d = _fullscreen
+      ? '<path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>'
+      : '<path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>';
+    _setSvg(fullscreenBtn, d);
+    if (fullscreenBtn) { fullscreenBtn.title = _fullscreen ? 'Exit fullscreen' : 'Fullscreen'; fullscreenBtn.setAttribute('aria-label', fullscreenBtn.title); }
+  }
+
+  function toggleExpand() {
+    if (_fullscreen) return;
+    _expanded = !_expanded;
+    consolePanel.classList.toggle('expanded', _expanded);
+    _updateExpandIcon();
+    if (_expanded) consolePanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function toggleConsoleFullscreen() { _fullscreen ? exitConsoleFullscreen() : enterConsoleFullscreen(); }
+
+  function enterConsoleFullscreen() {
+    _fullscreen = true;
+    consolePanel.classList.add('fullscreen');
+    if (consoleBackdrop) consoleBackdrop.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    _updateFsIcon();
+    const inp = document.getElementById('goal-input');
+    if (inp) inp.focus();
+  }
+
+  function exitConsoleFullscreen() {
+    if (!_fullscreen) return;
+    _fullscreen = false;
+    consolePanel.classList.remove('fullscreen');
+    if (consoleBackdrop) consoleBackdrop.classList.remove('visible');
+    document.body.style.overflow = '';
+    _updateFsIcon();
+  }
+
+  function clearConsole() {
+    const out = document.getElementById('console-output');
+    if (!out) return;
+    while (out.firstChild) out.removeChild(out.firstChild);
+    log('Console cleared.', 'c-dim');
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && _fullscreen) { exitConsoleFullscreen(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      const active = document.activeElement;
+      if (active && active.id === 'goal-input') { e.preventDefault(); runSwarm(); }
+    }
+  });
+
+  _updateExpandIcon();
+  _updateFsIcon();
 
   /* ── Run swarm — public demo, no API key needed ──────────────────────── */
   async function runSwarm() {
