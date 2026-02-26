@@ -1,24 +1,18 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "runtime": "python3.11"
-      }
-    },
-    {
-      "src": "nanobot/static/index.html",
-      "use": "@vercel/static"
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.11",
+      "maxDuration": 60
     }
-  ],
+  },
   "rewrites": [
     { "source": "/", "destination": "/nanobot/static/index.html" },
-    { "source": "/(health|docs|openapi\\.json|swarm/.*|sessions.*|agents.*|v1/.*|claude/.*)", "destination": "/api/index.py" },
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/(.*)", "destination": "/api/index.py" }
+    { "source": "/health", "destination": "/api/index.py" },
+    { "source": "/swarm/:path*", "destination": "/api/index.py" },
+    { "source": "/v1/:path*", "destination": "/api/index.py" },
+    { "source": "/docs", "destination": "/api/index.py" },
+    { "source": "/openapi.json", "destination": "/api/index.py" }
   ],
   "headers": [
     {
@@ -29,14 +23,5 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
     }
-  ],
-  "env": {
-    "ANTHROPIC_MODEL": "claude-sonnet-4-20250514",
-    "ENABLE_OILGAS_TEAMS": "true"
-  },
-  "build": {
-    "env": {
-      "PYTHON_VERSION": "3.11"
-    }
-  }
+  ]
 }
