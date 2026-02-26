@@ -7,14 +7,14 @@
       "config": { "maxLambdaSize": "50mb" }
     },
     {
-      "src": "nanobot/static/**",
+      "src": "nanobot/static/index.html",
       "use": "@vercel/static"
     }
   ],
   "rewrites": [
-    { "source": "/static/(.*)", "destination": "/nanobot/static/$1" },
     { "source": "/", "destination": "/nanobot/static/index.html" },
     { "source": "/(health|docs|openapi\\.json|swarm/.*|sessions.*|agents.*|v1/.*|claude/.*)", "destination": "/api/index.py" },
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/(.*)", "destination": "/api/index.py" }
   ],
   "headers": [
@@ -23,21 +23,13 @@
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "X-XSS-Protection", "value": "1; mode=block" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
-      ]
-    },
-    {
-      "source": "/static/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     }
   ],
   "env": {
     "ANTHROPIC_MODEL": "claude-sonnet-4-20250514",
-    "ENABLE_OILGAS_TEAMS": "true",
-    "SWARM_MODEL": "claude"
+    "ENABLE_OILGAS_TEAMS": "true"
   },
   "build": {
     "env": {
