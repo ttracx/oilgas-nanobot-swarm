@@ -1,0 +1,46 @@
+services:
+  # Nanobot API Gateway
+  - type: web
+    name: oilgas-nanobot-gateway
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: ohio
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-4-20250514
+      - key: GATEWAY_API_KEY
+        generateValue: true
+      - key: REDIS_HOST
+        fromService:
+          name: oilgas-nanobot-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: oilgas-nanobot-redis
+          type: redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          name: oilgas-nanobot-redis
+          type: redis
+          property: password
+      - key: SWARM_MODEL
+        value: claude
+      - key: ENABLE_OILGAS_TEAMS
+        value: "true"
+    disk:
+      name: workspace
+      mountPath: /app/workspace
+      sizeGB: 5
+
+  # Redis state store
+  - type: redis
+    name: oilgas-nanobot-redis
+    plan: starter
+    maxmemoryPolicy: noeviction
+    ipAllowList: []

@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: nanobot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nanobot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nanobot-gateway
+    restart: unless-stopped
+    ports:
+      - "8100:8100"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+      - GATEWAY_API_KEY=${GATEWAY_API_KEY}
+      - VLLM_URL=${VLLM_URL:-}
+      - VLLM_API_KEY=${VLLM_API_KEY:-}
+      - SWARM_MODEL=${SWARM_MODEL:-claude}
+      - ENABLE_OILGAS_TEAMS=true
+    volumes:
+      - ./workspace:/app/workspace
+      - ~/.nellie/vault:/vault:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  redis_data:

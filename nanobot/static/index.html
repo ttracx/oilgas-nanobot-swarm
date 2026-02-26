@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OilGas Nanobot Swarm — NeuralQuantum.ai</title>
+  <meta name="description" content="Hierarchical AI Agent Swarm for Oil & Gas Engineering — powered by VibeCaaS.com, a division of NeuralQuantum.ai LLC" />
+  <style>
+    /* ── NeuralQuantum.ai Design System ───────────────────────────────────────
+       Extracted from neuralquantum.ai — February 2026
+       Tokens: #7B1FA2 purple · #050038 navy · #5CE1E6 cyan · #10B981 emerald
+    ── */
+
+    :root {
+      --nq-purple:        #7B1FA2;
+      --nq-purple-hover:  #6A1B9A;
+      --nq-dark:          #050038;
+      --nq-cyan:          #5CE1E6;
+      --nq-emerald:       #10B981;
+      --nq-pink:          #EC4899;
+      --nq-amber:         #F59E0B;
+      --nq-nvidia:        #76b900;
+      --nq-white:         #FFFFFF;
+
+      --nq-gray-50:  #F9FAFB;
+      --nq-gray-100: #F3F4F6;
+      --nq-gray-200: #E5E7EB;
+      --nq-gray-300: #D1D5DB;
+      --nq-gray-400: #9CA3AF;
+      --nq-gray-500: #6B7280;
+      --nq-gray-600: #4B5563;
+      --nq-gray-700: #374151;
+      --nq-gray-800: #1F2937;
+      --nq-gray-900: #111827;
+
+      --nq-radius:   0.5rem;
+      --nq-max-w:    80rem;
+      --nq-sidebar:  16rem;
+
+      --nq-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      --nq-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    }
+
+    @keyframes quantum-wave {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+    @keyframes quantum-entangle {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(123,31,162,0.4); }
+      50% { box-shadow: 0 0 20px 10px rgba(123,31,162,0); }
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(92,225,230,0.3); }
+      50%       { box-shadow: 0 0 12px 4px rgba(92,225,230,0.1); }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--nq-gray-50);
+      color: var(--nq-gray-900);
+      font-family: var(--nq-font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Quantum background overlay ───────────────────────────────────── */
+    .nq-bg-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: -50;
+      pointer-events: none;
+      background: rgba(5,0,56,0.03);
+    }
+    .nq-bg-radial {
+      position: fixed;
+      top: 0; right: 0;
+      width: 600px; height: 600px;
+      z-index: -49;
+      pointer-events: none;
+      background: radial-gradient(ellipse at top right, rgba(123,31,162,0.08) 0%, transparent 70%);
+    }
+
+    /* ── Navigation ───────────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--nq-gray-200);
+      height: 64px;
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+    }
+    .nav-inner {
+      max-width: var(--nq-max-w);
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .nav-logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--nq-purple), var(--nq-cyan));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: quantum-wave 4s ease-in-out infinite;
+    }
+    .nav-logo-icon svg { width: 18px; height: 18px; color: white; }
+    .nav-wordmark {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .nav-wordmark .w-oil  { color: var(--nq-dark); }
+    .nav-wordmark .w-gas  { color: var(--nq-purple); }
+    .nav-wordmark .w-sub  { color: var(--nq-gray-400); font-size: 0.7rem; font-weight: 500; display: block; margin-top: 1px; }
+    nav ul {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      list-style: none;
+    }
+    nav ul a {
+      color: var(--nq-gray-600);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: var(--nq-radius);
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    nav ul a:hover { background: var(--nq-gray-100); color: var(--nq-gray-900); }
+    nav ul a.active { color: var(--nq-purple); font-weight: 600; }
+    .nav-cta {
+      background: var(--nq-purple) !important;
+      color: #fff !important;
+      font-weight: 600 !important;
+      padding: 6px 18px !important;
+      box-shadow: 0 2px 8px rgba(123,31,162,0.25);
+    }
+    .nav-cta:hover { background: var(--nq-purple-hover) !important; }
+
+    /* ── Main ─────────────────────────────────────────────────────────── */
+    main {
+      flex: 1;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────────────────── */
+    .hero {
+      background: var(--nq-dark);
+      padding: 5rem 1.5rem 4rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(123,31,162,0.35) 0%, transparent 65%),
+                  radial-gradient(ellipse at 80% 80%, rgba(92,225,230,0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      max-width: 56rem;
+      margin: 0 auto;
+      position: relative;
+      animation: slideUp 0.6s ease-out;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 14px;
+      border-radius: 99px;
+      background: rgba(123,31,162,0.2);
+      border: 1px solid rgba(123,31,162,0.4);
+      color: #c084fc;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--nq-cyan);
+      animation: pulseGlow 2s infinite;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      color: var(--nq-cyan);
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .hero-subtitle {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: rgba(255,255,255,0.65);
+      max-width: 42rem;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.75rem 1.75rem;
+      border-radius: var(--nq-radius);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--nq-purple);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(123,31,162,0.3);
+    }
+    .btn-primary:hover { background: var(--nq-purple-hover); box-shadow: 0 4px 20px rgba(123,31,162,0.45); transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent;
+      color: rgba(255,255,255,0.8);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.35); color: #fff; }
+    .btn-outline-purple {
+      background: transparent;
+      color: var(--nq-purple);
+      border: 1px solid rgba(123,31,162,0.35);
+    }
+    .btn-outline-purple:hover { background: var(--nq-purple); color: #fff; }
+
+    /* ── Content wrapper ──────────────────────────────────────────────── */
+    .content {
+      max-width: var(--nq-max-w);
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+      width: 100%;
+    }
+
+    /* ── Status Bar ──────────────────────────────────────────────────── */
+    .status-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 3rem;
+    }
+    .status-card {
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--nq-gray-200);
+      border-radius: var(--nq-radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .status-card:hover { box-shadow: 0 4px 12px rgba(123,31,162,0.08); border-color: rgba(123,31,162,0.2); }
+    .status-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: rgba(123,31,162,0.08);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .status-icon svg { width: 18px; height: 18px; color: var(--nq-purple); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green  { background: var(--nq-emerald); box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+    .dot-yellow { background: var(--nq-amber); }
+    .dot-red    { background: #ef4444; }
+    .dot-gray   { background: var(--nq-gray-300); }
+    .status-text-label { font-size: 0.72rem; color: var(--nq-gray-500); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+    .status-text-value { font-size: 0.9rem; font-weight: 700; color: var(--nq-gray-900); }
+
+    /* ── Section heading ──────────────────────────────────────────────── */
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.25rem;
+    }
+    .section-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 12px;
+      border-radius: 99px;
+      background: rgba(123,31,162,0.08);
+      border: 1px solid rgba(123,31,162,0.2);
+      color: var(--nq-purple);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--nq-dark);
+      flex: 1;
+    }
+    .section-divider { flex: 1; height: 1px; background: var(--nq-gray-200); }
+
+    /* ── Teams Grid ──────────────────────────────────────────────────── */
+    .teams-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 1rem;
+      margin-bottom: 3rem;
+    }
+    .team-card {
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--nq-gray-200);
+      border-radius: 0.625rem;
+      padding: 1.25rem;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .team-card:hover {
+      border-color: rgba(123,31,162,0.5);
+      box-shadow: 0 6px 20px rgba(123,31,162,0.12);
+      transform: translateY(-2px);
+    }
+    .team-card:focus-visible { outline: 2px solid var(--nq-purple); outline-offset: 2px; }
+    .team-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.625rem; gap: 8px; }
+    .team-name { font-weight: 700; font-size: 0.92rem; color: var(--nq-dark); font-family: var(--nq-font-mono); }
+    .team-mode-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+    .mode-h { background: rgba(123,31,162,0.1); color: var(--nq-purple); border: 1px solid rgba(123,31,162,0.25); }
+    .mode-f { background: rgba(16,185,129,0.08); color: #059669; border: 1px solid rgba(16,185,129,0.25); }
+    .team-desc { font-size: 0.82rem; color: var(--nq-gray-600); line-height: 1.55; }
+    .team-hint { font-size: 0.72rem; color: var(--nq-gray-400); margin-top: 0.5rem; display: flex; align-items: center; gap: 4px; }
+
+    /* ── Console Panel ───────────────────────────────────────────────── */
+    .console-panel {
+      background: var(--nq-dark);
+      border: 1px solid rgba(123,31,162,0.3);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      margin-bottom: 3rem;
+      box-shadow: 0 8px 32px rgba(5,0,56,0.2);
+    }
+    .console-titlebar {
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .console-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .console-label { font-size: 0.78rem; color: rgba(255,255,255,0.35); margin-left: 8px; font-family: var(--nq-font-mono); }
+    .console-input-area { display: flex; gap: 10px; padding: 14px 16px; }
+    #goal-input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: rgba(255,255,255,0.9);
+      font-family: var(--nq-font-mono);
+      font-size: 0.83rem;
+      resize: none;
+      transition: border-color 0.2s;
+      line-height: 1.5;
+    }
+    #goal-input::placeholder { color: rgba(255,255,255,0.25); }
+    #goal-input:focus { outline: none; border-color: rgba(123,31,162,0.6); background: rgba(255,255,255,0.07); }
+    #run-btn {
+      background: var(--nq-purple);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 22px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.85rem;
+      align-self: flex-end;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(123,31,162,0.35);
+      white-space: nowrap;
+    }
+    #run-btn:hover { background: var(--nq-purple-hover); box-shadow: 0 4px 14px rgba(123,31,162,0.5); }
+    #run-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .console-output {
+      padding: 4px 16px 16px;
+      font-family: var(--nq-font-mono);
+      font-size: 0.79rem;
+      line-height: 1.75;
+      min-height: 72px;
+      max-height: 340px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .c-prompt { color: var(--nq-cyan); }
+    .c-info  { color: #64b5f6; }
+    .c-ok    { color: #a5d6a7; }
+    .c-warn  { color: #ffcc80; }
+    .c-err   { color: #ef9a9a; }
+    .c-dim   { color: rgba(255,255,255,0.25); }
+
+    /* ── Tools Grid ──────────────────────────────────────────────────── */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-bottom: 3rem;
+    }
+    .tool-card {
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--nq-gray-200);
+      border-left: 3px solid var(--nq-purple);
+      border-radius: 0.5rem;
+      padding: 1rem 1.125rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .tool-card:hover { box-shadow: 0 4px 14px rgba(123,31,162,0.1); }
+    .tool-name { font-family: var(--nq-font-mono); font-size: 0.78rem; color: var(--nq-purple); font-weight: 700; margin-bottom: 4px; }
+    .tool-desc { font-size: 0.79rem; color: var(--nq-gray-600); line-height: 1.55; }
+
+    /* ── Quick Links / Badges row ────────────────────────────────────── */
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 3rem;
+    }
+    .q-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s;
+      border: 1px solid;
+    }
+    .q-badge-purple { background: rgba(123,31,162,0.08); border-color: rgba(123,31,162,0.25); color: var(--nq-purple); }
+    .q-badge-purple:hover { background: var(--nq-purple); color: #fff; border-color: var(--nq-purple); }
+    .q-badge-navy { background: rgba(5,0,56,0.06); border-color: rgba(5,0,56,0.15); color: var(--nq-dark); }
+    .q-badge-navy:hover { background: var(--nq-dark); color: #fff; }
+    .q-badge-cyan { background: rgba(92,225,230,0.08); border-color: rgba(92,225,230,0.3); color: #0891b2; }
+    .q-badge-cyan:hover { background: rgba(92,225,230,0.15); }
+
+    /* ── Footer ──────────────────────────────────────────────────────── */
+    footer {
+      background: var(--nq-dark);
+      color: rgba(255,255,255,0.85);
+      padding: 2.5rem 1.5rem;
+    }
+    .footer-inner {
+      max-width: var(--nq-max-w);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 0.5rem;
+    }
+    .footer-logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--nq-purple), var(--nq-cyan));
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .footer-logo svg { width: 14px; height: 14px; color: #fff; }
+    .footer-wordmark { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; }
+    .footer-wordmark .fw-neural  { color: #fff; }
+    .footer-wordmark .fw-quantum { color: #c084fc; }
+    .footer-wordmark .fw-ai      { color: var(--nq-cyan); }
+    .footer-copy {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.45);
+      line-height: 1.6;
+    }
+    .footer-copy a { color: rgba(92,225,230,0.8); text-decoration: none; }
+    .footer-copy a:hover { color: var(--nq-cyan); text-decoration: underline; }
+    .footer-links {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .footer-links a {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.4);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-links a:hover { color: rgba(255,255,255,0.8); }
+    .footer-links-row { display: flex; gap: 16px; }
+    .footer-divider { border-top: 1px solid rgba(255,255,255,0.07); margin: 2rem auto 0; padding-top: 1.25rem; max-width: var(--nq-max-w); display: flex; justify-content: center; }
+    .footer-bottom-copy { font-size: 0.72rem; color: rgba(255,255,255,0.25); text-align: center; }
+
+    /* ── Responsive ──────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      nav ul { display: none; }
+      .hero { padding: 3rem 1rem 2.5rem; }
+      .footer-inner { grid-template-columns: 1fr; }
+      .footer-links { align-items: flex-start; }
+      .footer-links-row { flex-wrap: wrap; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Quantum background overlays -->
+<div class="nq-bg-overlay"></div>
+<div class="nq-bg-radial"></div>
+
+<!-- ── Navigation ─────────────────────────────────────────────────────────── -->
+<nav role="navigation" aria-label="Main navigation">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand" aria-label="OilGas Nanobot Swarm Home">
+      <div class="nav-logo-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="nav-wordmark">
+        <span class="w-oil">OilGas</span><span class="w-gas"> Nanobot</span>
+        <span class="w-sub">by NeuralQuantum.ai</span>
+      </div>
+    </a>
+
+    <ul role="list">
+      <li><a href="/" class="active" aria-current="page">Dashboard</a></li>
+      <li><a href="#teams">Teams</a></li>
+      <li><a href="#tools">Tools</a></li>
+      <li><a href="#console">Console</a></li>
+      <li><a href="/docs" target="_blank" rel="noopener" class="nav-cta">API Docs</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ── Hero ───────────────────────────────────────────────────────────────── -->
+<section class="hero" aria-labelledby="hero-heading">
+  <div class="hero-inner">
+    <div class="hero-badge" role="status">
+      <span class="hero-badge-dot" aria-hidden="true"></span>
+      Oil &amp; Gas Engineering Intelligence
+    </div>
+    <h1 id="hero-heading">
+      Hierarchical AI Agent Swarm<br/>
+      for O&amp;G Engineering
+    </h1>
+    <p class="hero-subtitle">
+      Autonomous multi-agent analysis for upstream, midstream, and downstream operations.
+      Reservoir engineering, drilling, production, HSE, and economics — powered by Claude &amp; NeuralQuantum.ai.
+    </p>
+    <div class="hero-actions">
+      <a href="#console" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        Run a Swarm Task
+      </a>
+      <a href="/docs" target="_blank" rel="noopener" class="btn btn-outline">API Reference</a>
+      <a href="https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm" target="_blank" rel="noopener" class="btn btn-outline">GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Content ─────────────────────────────────────────────────────────────── -->
+<div class="content">
+
+  <!-- Quick links -->
+  <div class="quick-links" role="navigation" aria-label="Quick links">
+    <a href="/docs" target="_blank" rel="noopener" class="q-badge q-badge-purple">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Swagger UI
+    </a>
+    <a href="/health" class="q-badge q-badge-navy">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Health Check
+    </a>
+    <a href="/sessions" class="q-badge q-badge-navy">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Session History
+    </a>
+    <a href="https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm" target="_blank" rel="noopener" class="q-badge q-badge-cyan">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      Source Code
+    </a>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar" role="status" aria-label="System status">
+    <div class="status-card">
+      <div class="status-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div>
+        <div class="status-text-label">Gateway</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="status-dot dot-gray" id="dot-gateway" aria-hidden="true"></div>
+          <div class="status-text-value" id="stat-gateway">Checking</div>
+        </div>
+      </div>
+    </div>
+    <div class="status-card">
+      <div class="status-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      </div>
+      <div>
+        <div class="status-text-label">Claude Backend</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="status-dot dot-gray" id="dot-claude" aria-hidden="true"></div>
+          <div class="status-text-value" id="stat-claude">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="status-card">
+      <div class="status-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      </div>
+      <div>
+        <div class="status-text-label">State Store</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="status-dot dot-gray" id="dot-redis" aria-hidden="true"></div>
+          <div class="status-text-value" id="stat-redis">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="status-card">
+      <div class="status-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      </div>
+      <div>
+        <div class="status-text-label">O&amp;G Teams</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="status-dot dot-green" aria-hidden="true"></div>
+          <div class="status-text-value">9 Active</div>
+        </div>
+      </div>
+    </div>
+    <div class="status-card">
+      <div class="status-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      </div>
+      <div>
+        <div class="status-text-label">Eng. Tools</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="status-dot dot-green" aria-hidden="true"></div>
+          <div class="status-text-value">7 Registered</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent Teams Section -->
+  <section id="teams" aria-labelledby="teams-heading">
+    <div class="section-head">
+      <span class="section-badge">Agent Teams</span>
+      <h2 id="teams-heading" class="section-title">Oil &amp; Gas Swarm Teams</h2>
+      <div class="section-divider" aria-hidden="true"></div>
+    </div>
+    <div class="teams-grid" id="teams-grid" role="list"></div>
+  </section>
+
+  <!-- Console Section -->
+  <section id="console" aria-labelledby="console-heading">
+    <div class="section-head">
+      <span class="section-badge">Live Console</span>
+      <h2 id="console-heading" class="section-title">Swarm Console</h2>
+      <div class="section-divider" aria-hidden="true"></div>
+    </div>
+    <div class="console-panel" role="region" aria-label="Swarm task console">
+      <div class="console-titlebar" aria-hidden="true">
+        <div class="console-dot" style="background:#ef4444"></div>
+        <div class="console-dot" style="background:#eab308"></div>
+        <div class="console-dot" style="background:#22c55e"></div>
+        <span class="console-label">nanobot-swarm gateway v2.0 — NeuralQuantum.ai</span>
+      </div>
+      <div class="console-input-area">
+        <textarea
+          id="goal-input"
+          rows="3"
+          placeholder="Describe your engineering task&#10;e.g. Calculate ECD for 10.5 ppg mud at 9,800 ft TVD with 350 psi annular pressure loss"
+          aria-label="Engineering task goal"
+        ></textarea>
+        <button id="run-btn" onclick="runSwarm()" aria-label="Run swarm task">&#9654; Run</button>
+      </div>
+      <div class="console-output" id="console-output" role="log" aria-live="polite" aria-label="Swarm output"></div>
+    </div>
+  </section>
+
+  <!-- Engineering Tools Section -->
+  <section id="tools" aria-labelledby="tools-heading">
+    <div class="section-head">
+      <span class="section-badge">Engineering Tools</span>
+      <h2 id="tools-heading" class="section-title">Built-in Calculators</h2>
+      <div class="section-divider" aria-hidden="true"></div>
+    </div>
+    <div class="tools-grid" id="tools-grid" role="list"></div>
+  </section>
+
+</div><!-- /content -->
+
+<!-- ── Footer ──────────────────────────────────────────────────────────────── -->
+<footer role="contentinfo">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">
+        <div class="footer-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <span class="footer-wordmark">
+          <span class="fw-neural">Neural</span><span class="fw-quantum">Quantum</span><span class="fw-ai">.ai</span>
+        </span>
+      </div>
+      <div class="footer-copy">
+        &copy; 2026 <strong style="color:rgba(255,255,255,0.7)">OilGas Nanobot Swarm</strong> powered by
+        <a href="https://vibecaas.com" target="_blank" rel="noopener">VibeCaaS.com</a>
+        a division of <a href="https://neuralquantum.ai" target="_blank" rel="noopener">NeuralQuantum.ai LLC</a>.
+        All rights reserved.
+      </div>
+    </div>
+    <nav class="footer-links" aria-label="Footer navigation">
+      <div class="footer-links-row">
+        <a href="/docs" target="_blank" rel="noopener">API Docs</a>
+        <a href="/health">Health</a>
+        <a href="/sessions">Sessions</a>
+        <a href="/swarm/topology">Topology</a>
+      </div>
+      <div class="footer-links-row">
+        <a href="https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://neuralquantum.ai" target="_blank" rel="noopener">NeuralQuantum.ai</a>
+        <a href="https://vibecaas.com" target="_blank" rel="noopener">VibeCaaS.com</a>
+      </div>
+    </nav>
+  </div>
+  <div class="footer-divider">
+    <p class="footer-bottom-copy">
+      Built with the NeuralQuantum.ai Design System &mdash; February 2026
+    </p>
+  </div>
+</footer>
+
+<script>
+  /* ── Data ──────────────────────────────────────────────────────────────── */
+  const TEAMS = [
+    { name: 'well-engineering-review', mode: 'h', desc: 'Casing design, ECD, kick tolerance, MAASP, and regulatory compliance verification.', goal: 'Review well engineering design: TD 12,500 ft TVD, MW=10.5 ppg, shoe at 8,200 ft with FG=14.2 ppg. Check ECD, kick tolerance, and MAASP.' },
+    { name: 'reservoir-analysis', mode: 'h', desc: 'IPR curves, Archie water saturation, formation evaluation, and reserve estimation.', goal: 'Reservoir analysis: porosity 22%, Rt=12.5 ohm-m, Rw=0.04, reservoir pressure 3,200 psi, flowing BHP 1,800 psi, rate 650 BOPD.' },
+    { name: 'drilling-ops-daily', mode: 'f', desc: 'Daily drilling report, NPT analysis, cost tracker, and well control status.', goal: 'Daily drilling ops briefing. Depth: 9,450 ft MD / 9,200 ft TVD. ROP: 35 ft/hr. MW: 10.5 ppg. No incidents last 24 hrs.' },
+    { name: 'production-optimization', mode: 'h', desc: 'AI lift tuning, decline curve analysis, waterflood performance, and nodal analysis.', goal: 'Optimize production for 12 wells. Average water cut 65%, PI 0.45 bopd/psi, reservoir pressure 2,800 psi. Identify top 3 candidates.' },
+    { name: 'pipeline-integrity', mode: 'h', desc: 'Corrosion assessment, ILI data review, MAOP verification, and DOT compliance.', goal: 'Pipeline integrity review: 8-inch crude oil line, 15,000 BOPD, 26 miles, MAOP 750 psi. Check pressure drop and erosional velocity.' },
+    { name: 'hse-compliance-audit', mode: 'h', desc: 'OSHA PSM 14-element audit, BSEE SEMS review, well integrity, and EPA emissions.', goal: 'HSE compliance audit for offshore platform. Review PSM 14 elements, SEMS requirements, and well integrity barriers.' },
+    { name: 'well-economics', mode: 'h', desc: 'AFE preparation, NPV/IRR analysis, break-even price, and EUR sensitivity modeling.', goal: 'Well economics: $4.2M AFE, 800 BOPD IP, 45-degree decline, $70/bbl oil. Calculate NPV10, IRR, and break-even.' },
+    { name: 'oilgas-field-briefing', mode: 'f', desc: 'Daily ops briefing with production summary, safety updates, and 24-hour plan.', goal: 'Daily field briefing. Production: 8,200 BOPD oil, 14.5 MMSCFD gas, 22,000 BWPD. 2 wells shut-in for ESP replacement.' },
+    { name: 'completions-design', mode: 'h', desc: 'Frac stage design, proppant and fluid selection, cluster spacing, and EUR projection.', goal: 'Hydraulic fracturing design for Wolfcamp A lateral: 8,500 ft, 500 ft stage spacing, 500 MPa closure stress, target 2,000 BOPD IP.' },
+  ];
+
+  const TOOLS = [
+    { name: 'reservoir_pressure_calc', desc: 'Hydrostatic gradient, BHP from wellhead, pore pressure, fracture gradient (Hubbert & Willis)' },
+    { name: 'drilling_engineering_calc', desc: 'ECD, kick tolerance, mud weight window, surge/swab pressure analysis' },
+    { name: 'production_engineering_calc', desc: 'Productivity Index, Vogel IPR curve, Darcy radial flow, artificial lift selection' },
+    { name: 'pipeline_hydraulics_calc', desc: 'Pressure drop (Darcy-Weisbach), flow regime (Reynolds), line sizing' },
+    { name: 'well_control_calc', desc: 'MAASP, kill mud weight, driller method kill schedule, SICP analysis' },
+    { name: 'formation_evaluation_calc', desc: 'Archie Sw, Wyllie sonic porosity, GR shale volume, net pay cutoff' },
+    { name: 'oilgas_regulatory_reference', desc: 'API standards, BSEE/BOEM offshore, OSHA PSM 14 elements, EPA Quad O, NORSOK D-010' },
+  ];
+
+  /* ── Build teams grid ─────────────────────────────────────────────────── */
+  const teamsGrid = document.getElementById('teams-grid');
+  TEAMS.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'team-card';
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', t.name + ' team. Click to load example task.');
+
+    const header = document.createElement('div');
+    header.className = 'team-card-header';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'team-name';
+    nameEl.textContent = t.name;
+
+    const badge = document.createElement('span');
+    badge.className = 'team-mode-badge ' + (t.mode === 'h' ? 'mode-h' : 'mode-f');
+    badge.textContent = t.mode === 'h' ? 'Hierarchical' : 'Flat';
+
+    header.appendChild(nameEl);
+    header.appendChild(badge);
+
+    const desc = document.createElement('div');
+    desc.className = 'team-desc';
+    desc.textContent = t.desc;
+
+    const hint = document.createElement('div');
+    hint.className = 'team-hint';
+    hint.textContent = 'Click to load example task';
+
+    card.appendChild(header);
+    card.appendChild(desc);
+    card.appendChild(hint);
+
+    const goal = t.goal;
+    card.addEventListener('click', () => setGoal(goal));
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGoal(goal); } });
+
+    teamsGrid.appendChild(card);
+  });
+
+  /* ── Build tools grid ─────────────────────────────────────────────────── */
+  const toolsGrid = document.getElementById('tools-grid');
+  TOOLS.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'tool-card';
+    card.setAttribute('role', 'listitem');
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'tool-name';
+    nameEl.textContent = t.name;
+
+    const descEl = document.createElement('div');
+    descEl.className = 'tool-desc';
+    descEl.textContent = t.desc;
+
+    card.appendChild(nameEl);
+    card.appendChild(descEl);
+    toolsGrid.appendChild(card);
+  });
+
+  /* ── Console helpers ──────────────────────────────────────────────────── */
+  function clearOutput() {
+    const out = document.getElementById('console-output');
+    while (out.firstChild) { out.removeChild(out.firstChild); }
+  }
+
+  function log(msg, cls) {
+    const out = document.getElementById('console-output');
+    const span = document.createElement('span');
+    if (cls) span.className = cls;
+    span.textContent = msg;
+    out.appendChild(span);
+    out.appendChild(document.createElement('br'));
+    out.scrollTop = out.scrollHeight;
+  }
+
+  function setGoal(text) {
+    document.getElementById('goal-input').value = text;
+    document.getElementById('console').scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => document.getElementById('goal-input').focus(), 400);
+  }
+
+  /* ── Run swarm ────────────────────────────────────────────────────────── */
+  async function runSwarm() {
+    const goal = document.getElementById('goal-input').value.trim();
+    if (!goal) { log('Warning: Please enter a goal.', 'c-warn'); return; }
+
+    const btn = document.getElementById('run-btn');
+    btn.disabled = true;
+    btn.textContent = 'Running...';
+    clearOutput();
+
+    const preview = goal.length > 90 ? goal.slice(0, 90) + '...' : goal;
+    log('nanobot-swarm$ ', 'c-prompt');
+    log('Dispatching to hierarchical swarm...', 'c-info');
+    log('Goal: ' + preview, 'c-dim');
+    log('');
+
+    try {
+      const resp = await fetch('/swarm/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal, mode: 'hierarchical' }),
+      });
+
+      if (resp.status === 401) {
+        log('Authentication required.', 'c-warn');
+        log('Use /docs (Swagger UI) to authenticate and run requests.', 'c-dim');
+        return;
+      }
+      if (!resp.ok) {
+        const errText = await resp.text();
+        log('Error ' + resp.status + ': ' + errText.slice(0, 200), 'c-err');
+        return;
+      }
+
+      const data = await resp.json();
+      log('Session:  ' + data.session_id, 'c-ok');
+      log('Tasks:    ' + data.subtask_count, 'c-ok');
+      log('');
+      log('-- RESULT ------------------------------------------------');
+      log(data.final_answer || '(no answer returned)', 'c-ok');
+
+    } catch (e) {
+      log('Network error: ' + e.message, 'c-err');
+      log('Ensure the gateway is running on port 8100.', 'c-dim');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '\u25B6 Run';
+    }
+  }
+
+  /* ── Health check ─────────────────────────────────────────────────────── */
+  function setStatus(dotId, statId, dotCls, text) {
+    const dot  = document.getElementById(dotId);
+    const stat = document.getElementById(statId);
+    if (dot)  { dot.className  = 'status-dot ' + dotCls; }
+    if (stat) { stat.textContent = text; }
+  }
+
+  async function checkHealth() {
+    try {
+      const r = await fetch('/health');
+      const d = await r.json();
+      setStatus('dot-gateway', 'stat-gateway', 'dot-green', 'Online');
+      setStatus('dot-claude',  'stat-claude',  d.claude_runner ? 'dot-green' : 'dot-yellow', d.claude_runner ? 'Connected' : 'Not configured');
+      setStatus('dot-redis',   'stat-redis',   'dot-green', 'Connected');
+    } catch (_) {
+      setStatus('dot-gateway', 'stat-gateway', 'dot-red', 'Offline');
+      setStatus('dot-claude',  'stat-claude',  'dot-gray', '—');
+      setStatus('dot-redis',   'stat-redis',   'dot-gray', '—');
+    }
+  }
+
+  /* ── Init ─────────────────────────────────────────────────────────────── */
+  log('NeuralQuantum.ai OilGas Nanobot Swarm v2.0', 'c-prompt');
+  log('Click a team card above or type your own engineering goal.', 'c-dim');
+
+  checkHealth();
+  setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>

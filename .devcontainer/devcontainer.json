@@ -1,0 +1,49 @@
+{
+  "name": "OilGas Nanobot Swarm",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  },
+  "postCreateCommand": "pip install -e '.[dev]' && cp .env.example .env",
+  "forwardPorts": [8100, 6379],
+  "portsAttributes": {
+    "8100": {
+      "label": "Nanobot API Gateway",
+      "onAutoForward": "openBrowser"
+    },
+    "6379": {
+      "label": "Redis"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-azuretools.vscode-docker",
+        "humao.rest-client",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml",
+        "github.copilot"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true,
+        "python.formatting.provider": "black",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        }
+      }
+    }
+  },
+  "remoteEnv": {
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}"
+  },
+  "runServices": ["redis"],
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "nanobot",
+  "workspaceFolder": "/workspace"
+}

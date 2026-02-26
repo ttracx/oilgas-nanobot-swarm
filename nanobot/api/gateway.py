@@ -7,8 +7,11 @@ import os
 import structlog
 import httpx
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from nanobot.core.hierarchical_swarm import HierarchicalSwarm
@@ -27,6 +30,7 @@ from nanobot.tools.knowledge_tools import register_knowledge_tools
 from nanobot.tools.msgraph_tools import register_msgraph_tools
 from nanobot.tools.vault_memory_tools import register_vault_memory_tools, set_vector_store as set_memory_vector_store
 from nanobot.tools.base import ToolRegistry
+from nanobot.tools.oilgas_tools import get_oilgas_tools
 from nanobot.integrations.microsoft_graph import ms_graph
 from nanobot.integrations.nellie_memory_bridge import memory_bridge
 from nanobot.knowledge.vector_store import VaultVectorStore
@@ -167,6 +171,20 @@ async def lifespan(app: FastAPI):
         log.warning("file_watcher_init_failed", error=str(e)[:100])
         file_watcher = None
 
+    # Load oil & gas agent teams if enabled
+    if os.getenv("ENABLE_OILGAS_TEAMS", "true").lower() in ("true", "1", "yes"):
+        try:
+            import nanobot.teams.oilgas_teams  # noqa: F401 — registers teams on import
+            log.info("oilgas_teams_loaded")
+        except Exception as e:
+            log.warning("oilgas_teams_load_failed", error=str(e)[:100])
+
+    # Register oil & gas engineering tools with Claude runner
+    if claude_runner:
+        for tool in get_oilgas_tools():
+            claude_runner.registry.register(tool)
+        log.info("oilgas_tools_registered", count=len(get_oilgas_tools()))
+
     # Start background scheduler with swarm runner
     async def _swarm_runner(goal: str, mode: str, context: dict) -> dict:
         """Scheduler callback — routes to appropriate swarm backend.
@@ -219,10 +237,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="NeuralQuantum Nanobot Swarm Gateway",
+    title="OilGas Nanobot Swarm",
+    description="Hierarchical AI Agent Swarm for Oil & Gas Engineering — powered by VibeCaaS.com / NeuralQuantum.ai LLC",
     version="2.0.0",
     lifespan=lifespan,
 )
+
+# Serve static dashboard files
+_STATIC_DIR = Path(__file__).parent.parent / "static"
+if _STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
 # Include OpenClaw/Nellie OpenAI-compatible routes
 app.include_router(openclaw_router)
@@ -319,6 +343,15 @@ async def run_claude(request: ClaudeRunRequest, _: str = Depends(verify_api_key)
     if not result.get("success"):
         raise HTTPException(500, result.get("error", "Claude run failed"))
     return result
+
+
+@app.get("/", include_in_schema=False)
+async def dashboard():
+    """Serve the OilGas Nanobot Swarm web dashboard."""
+    index_path = Path(__file__).parent.parent / "static" / "index.html"
+    if index_path.exists():
+        return FileResponse(str(index_path), media_type="text/html")
+    return {"message": "OilGas Nanobot Swarm API", "docs": "/docs", "health": "/health"}
 
 
 @app.get("/health")

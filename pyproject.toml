@@ -3,10 +3,20 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nanobot-swarm"
-version = "1.0.0"
-description = "NeuralQuantum Hierarchical Nanobot Swarm System"
+name = "oilgas-nanobot-swarm"
+version = "2.0.0"
+description = "Hierarchical AI Agent Swarm for Oil & Gas Engineering — powered by VibeCaaS.com / NeuralQuantum.ai LLC"
+readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.11"
+keywords = ["oil-gas", "engineering", "ai-agents", "swarm", "llm", "petroleum"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+]
 dependencies = [
     "openai>=1.50.0",
     "anthropic>=0.40.0",
@@ -21,6 +31,8 @@ dependencies = [
     "msgpack>=1.0",
     "watchdog>=4.0",
     "msal>=1.28.0",
+    "aiofiles>=23.0",
+    "mangum>=0.17.0",
 ]
 
 [project.optional-dependencies]
