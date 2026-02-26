@@ -16,8 +16,8 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
 # ── Config ────────────────────────────────────────────────────────────────────
-NVIDIA_API_KEY  = os.getenv("NVIDIA_API_KEY", "")
-GATEWAY_API_KEY = os.getenv("GATEWAY_API_KEY", "")
+NVIDIA_API_KEY  = os.getenv("NVIDIA_API_KEY", "").strip()
+GATEWAY_API_KEY = os.getenv("GATEWAY_API_KEY", "").strip()
 NIM_BASE_URL    = "https://integrate.api.nvidia.com/v1"
 NIM_MODEL       = "z-ai/glm5"
 
