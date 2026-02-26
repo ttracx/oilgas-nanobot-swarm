@@ -10,6 +10,8 @@
     { "source": "/health", "destination": "/api/index.py" },
     { "source": "/swarm/:path*", "destination": "/api/index.py" },
     { "source": "/v1/:path*", "destination": "/api/index.py" },
+    { "source": "/agent/:path*", "destination": "/api/index.py" },
+    { "source": "/team/:path*", "destination": "/api/index.py" },
     { "source": "/docs", "destination": "/api/index.py" },
     { "source": "/openapi.json", "destination": "/api/index.py" }
   ],
