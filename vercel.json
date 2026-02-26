@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "oilgas-nanobot-swarm",
   "builds": [
     {
       "src": "api/index.py",
@@ -12,34 +11,12 @@
       "use": "@vercel/static"
     }
   ],
-  "routes": [
-    {
-      "src": "/static/(.*)",
-      "dest": "/nanobot/static/$1"
-    },
-    {
-      "src": "/",
-      "dest": "/nanobot/static/index.html"
-    },
-    {
-      "src": "/(health|docs|openapi\\.json|swarm/.*|sessions.*|agents.*|v1/.*|claude/.*)",
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/api/index.py"
-    }
+  "rewrites": [
+    { "source": "/static/(.*)", "destination": "/nanobot/static/$1" },
+    { "source": "/", "destination": "/nanobot/static/index.html" },
+    { "source": "/(health|docs|openapi\\.json|swarm/.*|sessions.*|agents.*|v1/.*|claude/.*)", "destination": "/api/index.py" },
+    { "source": "/(.*)", "destination": "/api/index.py" }
   ],
-  "env": {
-    "ANTHROPIC_MODEL": "claude-sonnet-4-20250514",
-    "ENABLE_OILGAS_TEAMS": "true",
-    "SWARM_MODEL": "claude"
-  },
-  "build": {
-    "env": {
-      "PYTHON_VERSION": "3.11"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
@@ -56,5 +33,15 @@
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     }
-  ]
+  ],
+  "env": {
+    "ANTHROPIC_MODEL": "claude-sonnet-4-20250514",
+    "ENABLE_OILGAS_TEAMS": "true",
+    "SWARM_MODEL": "claude"
+  },
+  "build": {
+    "env": {
+      "PYTHON_VERSION": "3.11"
+    }
+  }
 }
