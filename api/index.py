@@ -15,7 +15,6 @@ from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from mangum import Mangum
 
 # ── Config ────────────────────────────────────────────────────────────────────
 OLLAMA_API_KEY  = os.getenv("OLLAMA_API_KEY", "").strip()
@@ -180,6 +179,3 @@ async def topology():
     return {"tiers": 3, "l0": "queen",
             "l1_roles": ["coder", "researcher", "analyst", "validator", "executor", "architect"]}
 
-
-# Mangum wraps ASGI for Vercel @vercel/python runtime
-handler = Mangum(app, lifespan="auto")

@@ -1,16 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python",
-      "config": { "maxLambdaSize": "50mb" }
-    },
-    {
-      "src": "nanobot/static/index.html",
-      "use": "@vercel/static"
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60
     }
-  ],
+  },
   "rewrites": [
     { "source": "/", "destination": "/nanobot/static/index.html" },
     { "source": "/health", "destination": "/api/index.py" },
@@ -28,8 +22,5 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
     }
-  ],
-  "build": {
-    "env": { "PYTHON_VERSION": "3.11" }
-  }
+  ]
 }

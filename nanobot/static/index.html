@@ -547,11 +547,13 @@
     }
     .footer-links a {
       font-size: 0.78rem;
-      color: rgba(255,255,255,0.4);
+      color: rgba(255,255,255,0.75);
       text-decoration: none;
       transition: color 0.15s;
+      background: none !important;
+      -webkit-text-fill-color: rgba(255,255,255,0.75);
     }
-    .footer-links a:hover { color: rgba(255,255,255,0.8); }
+    .footer-links a:hover { color: #fff; -webkit-text-fill-color: #fff; }
     .footer-links-row { display: flex; gap: 16px; }
     .footer-divider { border-top: 1px solid rgba(255,255,255,0.07); margin: 2rem auto 0; padding-top: 1.25rem; max-width: var(--nq-max-w); display: flex; justify-content: center; }
     .footer-bottom-copy { font-size: 0.72rem; color: rgba(255,255,255,0.25); text-align: center; }
