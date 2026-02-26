@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
+from mangum import Mangum
 
 # ── Config ────────────────────────────────────────────────────────────────────
 OLLAMA_API_KEY  = os.getenv("OLLAMA_API_KEY", "").strip()
@@ -223,4 +224,5 @@ async def topology():
             "l1_roles": ["coder", "researcher", "analyst", "validator", "executor", "architect"]}
 
 
-handler = app
+# Mangum wraps FastAPI ASGI app for Vercel's serverless runtime
+handler = Mangum(app, lifespan="off")
