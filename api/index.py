@@ -55,7 +55,7 @@ Powered by VibeCaaS.com, a division of NeuralQuantum.ai LLC."""
 
 
 def _nim_client() -> AsyncOpenAI:
-    return AsyncOpenAI(base_url=NIM_BASE_URL, api_key=NVIDIA_API_KEY)
+    return AsyncOpenAI(base_url=NIM_BASE_URL, api_key=NVIDIA_API_KEY, timeout=55.0)
 
 
 def _auth(key: str | None) -> None:
@@ -116,11 +116,10 @@ async def run_swarm(req: SwarmRequest, x_api_key: str | None = Header(default=No
             ],
             temperature=1.0,
             top_p=1.0,
-            max_tokens=8192,
+            max_tokens=4096,
             extra_body={
                 "chat_template_kwargs": {
-                    "enable_thinking": True,
-                    "clear_thinking": True,
+                    "enable_thinking": False,
                 }
             },
         )
