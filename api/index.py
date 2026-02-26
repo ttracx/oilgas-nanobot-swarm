@@ -2,8 +2,9 @@
 Vercel serverless entry point — OilGas Nanobot Swarm.
 
 Lightweight FastAPI app for Vercel's stateless serverless runtime.
-Model: z-ai/glm5 via NVIDIA NIM (with extended thinking).
-For full stack (Redis, vault, scheduler) deploy to Render or Railway.
+Primary: Ollama Cloud (ministral-3:8b, fast ~3s)
+Fallback: NVIDIA NIM (meta/llama-3.3-70b-instruct)
+Full stack (Redis, vault, scheduler): deploy to Render or Railway.
 """
 
 import os
@@ -16,13 +17,17 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
 # ── Config ────────────────────────────────────────────────────────────────────
+OLLAMA_API_KEY  = os.getenv("OLLAMA_API_KEY", "").strip()
 NVIDIA_API_KEY  = os.getenv("NVIDIA_API_KEY", "").strip()
 GATEWAY_API_KEY = os.getenv("GATEWAY_API_KEY", "").strip()
-OLLAMA_API_KEY  = os.getenv("OLLAMA_API_KEY", "").strip()
-NIM_BASE_URL    = "https://integrate.api.nvidia.com/v1"
-OLLAMA_BASE_URL = "https://ollama.com/api"
-NIM_MODEL       = "meta/llama-3.3-70b-instruct"   # fast NVIDIA NIM model
-FALLBACK_MODEL  = "z-ai/glm5"                      # available for explicit requests
+
+# Ollama Cloud — OpenAI-compatible, fast models
+OLLAMA_BASE_URL = "https://ollama.com/v1"
+OLLAMA_MODEL    = "ministral-3:8b"        # 3–5 s, good quality
+
+# NVIDIA NIM fallback
+NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
+NIM_MODEL    = "meta/llama-3.3-70b-instruct"
 
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -30,7 +35,7 @@ app = FastAPI(
     description=(
         "Hierarchical AI Agent Swarm for Oil & Gas Engineering — "
         "powered by VibeCaaS.com / NeuralQuantum.ai LLC\n\n"
-        "Stateless Vercel deployment using z-ai/glm5 via NVIDIA NIM. "
+        "Stateless Vercel deployment using Ollama Cloud (ministral-3:8b). "
         "For full stack (Redis, vault, scheduler) deploy to Render or Railway."
     ),
     version="2.0.0",
@@ -49,26 +54,20 @@ MIDSTREAM: Pipeline hydraulics (Darcy-Weisbach, Reynolds number, line sizing, AP
 HSE & REGULATORY: OSHA PSM 14 elements, API 6A/16A/570/650, BSEE/BOEM, EPA Quad O, NORSOK D-010.
 ECONOMICS: AFE, NPV10/IRR, break-even price, Arps decline, EUR estimation.
 
-For engineering calculations: state equation + reference, show all inputs with units,
-step-by-step calculation, clear result with units, safety/regulatory implications.
+For engineering calculations: state equation + reference, all inputs with units,
+step-by-step calculation, result with units, safety/regulatory notes.
 
 End responses with: ⚠️ Verify all calculations with a licensed petroleum engineer.
 
 Powered by VibeCaaS.com, a division of NeuralQuantum.ai LLC."""
 
 
-def _nim_client() -> AsyncOpenAI:
-    """NVIDIA NIM client — fast, high-quality LLMs."""
-    return AsyncOpenAI(base_url=NIM_BASE_URL, api_key=NVIDIA_API_KEY, timeout=55.0)
+def _ollama() -> AsyncOpenAI:
+    return AsyncOpenAI(base_url=OLLAMA_BASE_URL, api_key=OLLAMA_API_KEY or "ollama", timeout=50.0)
 
 
-def _ollama_client() -> AsyncOpenAI:
-    """Ollama Cloud client (OpenAI-compatible) — fallback."""
-    return AsyncOpenAI(
-        base_url="https://ollama.com/v1",
-        api_key=OLLAMA_API_KEY or "ollama",
-        timeout=55.0,
-    )
+def _nim() -> AsyncOpenAI:
+    return AsyncOpenAI(base_url=NIM_BASE_URL, api_key=NVIDIA_API_KEY, timeout=50.0)
 
 
 def _auth(key: str | None) -> None:
@@ -90,11 +89,45 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    model: str = NIM_MODEL
+    model: str = OLLAMA_MODEL
     messages: list[ChatMessage]
     stream: bool = False
     max_tokens: int = 4096
-    temperature: float = 1.0
+    temperature: float = 0.6
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+async def _complete(messages: list[dict], max_tokens: int = 4096) -> tuple[str, str]:
+    """Try Ollama Cloud first, fall back to NVIDIA NIM. Returns (answer, model_used)."""
+
+    # Primary: Ollama Cloud
+    if OLLAMA_API_KEY:
+        try:
+            resp = await _ollama().chat.completions.create(
+                model=OLLAMA_MODEL,
+                messages=messages,
+                temperature=0.6,
+                max_tokens=max_tokens,
+            )
+            return resp.choices[0].message.content or "", OLLAMA_MODEL
+        except Exception:
+            pass  # fall through to NIM
+
+    # Fallback: NVIDIA NIM
+    if NVIDIA_API_KEY:
+        try:
+            resp = await _nim().chat.completions.create(
+                model=NIM_MODEL,
+                messages=messages,
+                temperature=0.6,
+                top_p=0.9,
+                max_tokens=max_tokens,
+            )
+            return resp.choices[0].message.content or "", NIM_MODEL
+        except Exception as e:
+            raise HTTPException(502, f"All backends failed: {str(e)[:200]}")
+
+    raise HTTPException(503, "No AI backend configured. Set OLLAMA_API_KEY or NVIDIA_API_KEY.")
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -103,8 +136,10 @@ async def health():
     return {
         "status": "ok",
         "mode": "vercel-serverless",
-        "model": NIM_MODEL,
-        "backend": "NVIDIA NIM",
+        "primary_model": OLLAMA_MODEL,
+        "primary_backend": "Ollama Cloud",
+        "fallback_model": NIM_MODEL,
+        "ollama_configured": bool(OLLAMA_API_KEY),
         "nim_configured": bool(NVIDIA_API_KEY),
         "oilgas_teams": True,
     }
@@ -113,49 +148,14 @@ async def health():
 @app.post("/swarm/run")
 async def run_swarm(req: SwarmRequest, x_api_key: str | None = Header(default=None)):
     _auth(x_api_key)
-    if not NVIDIA_API_KEY:
-        raise HTTPException(503, "NVIDIA_API_KEY not configured")
 
     team_ctx = f"\n\nRequested team: {req.team}" if req.team else ""
-    t0 = time.time()
-
     messages = [
         {"role": "system", "content": OG_SYSTEM},
         {"role": "user", "content": req.goal + team_ctx},
     ]
-    answer = ""
-    used_model = NIM_MODEL
-
-    # Try NVIDIA NIM first
-    if NVIDIA_API_KEY:
-        try:
-            resp = await _nim_client().chat.completions.create(
-                model=NIM_MODEL,
-                messages=messages,
-                temperature=0.6,
-                top_p=0.9,
-                max_tokens=4096,
-            )
-            answer = resp.choices[0].message.content or ""
-        except Exception:
-            pass  # fall through to Ollama
-
-    # Fallback: Ollama Cloud
-    if not answer and OLLAMA_API_KEY:
-        try:
-            used_model = "ollama-cloud"
-            nim_resp = await _ollama_client().chat.completions.create(
-                model="llama3.2",
-                messages=messages,
-                temperature=0.6,
-                max_tokens=4096,
-            )
-            answer = nim_resp.choices[0].message.content or ""
-        except Exception as e:
-            raise HTTPException(502, f"All backends failed: {str(e)[:200]}")
-
-    if not answer:
-        raise HTTPException(503, "No AI backend configured. Set NVIDIA_API_KEY or OLLAMA_API_KEY.")
+    t0 = time.time()
+    answer, used_model = await _complete(messages, max_tokens=4096)
 
     return {
         "success": True,
@@ -172,61 +172,55 @@ async def run_swarm(req: SwarmRequest, x_api_key: str | None = Header(default=No
 
 @app.post("/v1/chat/completions")
 async def chat(req: ChatRequest, x_api_key: str | None = Header(default=None)):
-    if not NVIDIA_API_KEY:
-        raise HTTPException(503, "NVIDIA_API_KEY not configured")
-
     msgs = [{"role": "system", "content": OG_SYSTEM}]
     msgs += [{"role": m.role, "content": m.content} for m in req.messages]
-    client = _nim_client()
-    t0 = time.time()
 
-    if req.stream:
+    if req.stream and OLLAMA_API_KEY:
         async def _gen():
-            stream = await client.chat.completions.create(
-                model=NIM_MODEL,
-                messages=msgs,
-                temperature=req.temperature,
-                max_tokens=req.max_tokens,
-                stream=True,
-                extra_body={"chat_template_kwargs": {"enable_thinking": True, "clear_thinking": False}},
+            stream = await _ollama().chat.completions.create(
+                model=OLLAMA_MODEL, messages=msgs,
+                temperature=req.temperature, max_tokens=req.max_tokens, stream=True,
             )
             async for chunk in stream:
                 if chunk.choices and chunk.choices[0].delta.content is not None:
-                    data = chunk.model_dump_json()
-                    yield f"data: {data}\n\n".encode()
+                    yield f"data: {chunk.model_dump_json()}\n\n".encode()
             yield b"data: [DONE]\n\n"
         return StreamingResponse(_gen(), media_type="text/event-stream")
 
-    resp = await client.chat.completions.create(
-        model=NIM_MODEL,
-        messages=msgs,
-        temperature=req.temperature,
-        max_tokens=req.max_tokens,
-        extra_body={"chat_template_kwargs": {"enable_thinking": True, "clear_thinking": True}},
-    )
+    t0 = time.time()
+    answer, used_model = await _complete(msgs, max_tokens=req.max_tokens)
     return {
         "id": f"chatcmpl-{int(t0 * 1000)}",
         "object": "chat.completion",
-        "model": NIM_MODEL,
-        "choices": [c.model_dump() for c in resp.choices],
-        "usage": resp.usage.model_dump() if resp.usage else {},
+        "model": used_model,
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": answer}, "finish_reason": "stop"}],
+        "usage": {},
     }
 
 
 @app.get("/v1/models")
 async def models():
     return {"object": "list", "data": [
-        {"id": NIM_MODEL, "object": "model", "owned_by": "z-ai"},
+        {"id": OLLAMA_MODEL,  "object": "model", "owned_by": "ollama"},
+        {"id": NIM_MODEL,     "object": "model", "owned_by": "nvidia"},
         {"id": "nanobot-swarm", "object": "model", "owned_by": "neuralquantum"},
     ]}
 
 
 @app.get("/swarm/health")
 async def swarm_health():
-    return {"status": "ok", "mode": "vercel-serverless", "nim_configured": bool(NVIDIA_API_KEY)}
+    return {
+        "status": "ok",
+        "mode": "vercel-serverless",
+        "ollama": bool(OLLAMA_API_KEY),
+        "nim": bool(NVIDIA_API_KEY),
+    }
 
 
 @app.get("/swarm/topology")
 async def topology():
     return {"tiers": 3, "l0": "queen",
             "l1_roles": ["coder", "researcher", "analyst", "validator", "executor", "architect"]}
+
+
+handler = app
