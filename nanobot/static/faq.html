@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#050038" />
+  <title>FAQ — OilGas Nanobot Swarm</title>
+  <meta name="description" content="Frequently asked questions about OilGas Nanobot Swarm — AI-powered engineering analysis for oil and gas." />
+  <style>
+    :root {
+      --nq-purple: #7B1FA2; --nq-purple-hover: #6A1B9A;
+      --nq-dark: #050038; --nq-cyan: #5CE1E6;
+      --nq-emerald: #10B981; --nq-amber: #F59E0B;
+      --nq-gray-50: #F9FAFB; --nq-gray-100: #F3F4F6;
+      --nq-gray-200: #E5E7EB; --nq-gray-400: #9CA3AF;
+      --nq-gray-500: #6B7280; --nq-gray-600: #4B5563;
+      --nq-gray-700: #374151; --nq-gray-900: #111827;
+      --nq-radius: 0.5rem; --nq-max-w: 72rem;
+      --nq-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --nq-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--nq-gray-50); color: var(--nq-gray-900); font-family: var(--nq-font-sans); min-height: 100vh; display: flex; flex-direction: column; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    /* Nav */
+    nav { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--nq-gray-200); height: 64px; display: flex; align-items: center; padding: 0 1.5rem; }
+    .nav-inner { max-width: var(--nq-max-w); margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--nq-purple), var(--nq-cyan)); display: flex; align-items: center; justify-content: center; }
+    .nav-logo svg { width: 18px; height: 18px; color: #fff; }
+    .nav-wordmark { font-size: 1rem; font-weight: 700; color: var(--nq-gray-900); letter-spacing: -0.01em; }
+    .nav-wordmark em { color: var(--nq-purple); font-style: normal; }
+    nav ul { display: flex; align-items: center; gap: 4px; list-style: none; }
+    nav ul a { color: var(--nq-gray-600); text-decoration: none; font-size: 0.875rem; font-weight: 500; padding: 6px 14px; border-radius: var(--nq-radius); transition: all 0.15s; }
+    nav ul a:hover { background: var(--nq-gray-100); color: var(--nq-gray-900); }
+    nav ul a.active { color: var(--nq-purple); font-weight: 600; }
+    .nav-cta { background: var(--nq-purple) !important; color: #fff !important; font-weight: 600 !important; padding: 6px 18px !important; border-radius: var(--nq-radius); box-shadow: 0 2px 8px rgba(123,31,162,0.25); }
+    .nav-cta:hover { background: var(--nq-purple-hover) !important; }
+
+    /* Page header */
+    .page-header { background: var(--nq-dark); padding: 3.5rem 1.5rem 3rem; text-align: center; position: relative; overflow: hidden; }
+    .page-header::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(123,31,162,0.3) 0%, transparent 65%); pointer-events: none; }
+    .page-header-inner { max-width: var(--nq-max-w); margin: 0 auto; position: relative; }
+    .page-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 99px; background: rgba(123,31,162,0.2); border: 1px solid rgba(123,31,162,0.4); color: #c084fc; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1rem; }
+    .page-header h1 { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 700; color: var(--nq-cyan); margin-bottom: 0.75rem; }
+    .page-header p { color: rgba(255,255,255,0.6); font-size: 1rem; max-width: 36rem; margin: 0 auto; }
+
+    /* Layout */
+    main { flex: 1; }
+    .content { max-width: var(--nq-max-w); margin: 0 auto; padding: 3rem 1.5rem; }
+
+    /* FAQ Categories */
+    .faq-layout { display: grid; grid-template-columns: 220px 1fr; gap: 2.5rem; align-items: start; }
+    .faq-sidebar { position: sticky; top: 80px; }
+    .faq-sidebar-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--nq-gray-400); margin-bottom: 0.75rem; padding-left: 10px; }
+    .faq-nav-link { display: block; padding: 7px 10px; border-radius: 6px; font-size: 0.82rem; color: var(--nq-gray-600); text-decoration: none; transition: all 0.15s; border-left: 2px solid transparent; margin-bottom: 2px; }
+    .faq-nav-link:hover { color: var(--nq-purple); background: rgba(123,31,162,0.05); }
+    .faq-nav-link.active { color: var(--nq-purple); border-left-color: var(--nq-purple); background: rgba(123,31,162,0.06); font-weight: 600; }
+
+    /* FAQ sections */
+    .faq-section { margin-bottom: 3rem; scroll-margin-top: 80px; }
+    .faq-section-title { font-size: 1.2rem; font-weight: 700; color: var(--nq-dark); margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--nq-gray-200); display: flex; align-items: center; gap: 8px; }
+    .faq-section-icon { width: 28px; height: 28px; border-radius: 6px; background: rgba(123,31,162,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .faq-section-icon svg { width: 15px; height: 15px; color: var(--nq-purple); }
+
+    /* Accordion items */
+    .faq-item { border: 1px solid var(--nq-gray-200); border-radius: var(--nq-radius); margin-bottom: 8px; background: #fff; overflow: hidden; transition: border-color 0.15s; }
+    .faq-item:hover { border-color: rgba(123,31,162,0.3); }
+    .faq-item.open { border-color: rgba(123,31,162,0.4); }
+    .faq-question { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; cursor: pointer; font-weight: 600; font-size: 0.92rem; color: var(--nq-gray-900); -webkit-tap-highlight-color: transparent; user-select: none; }
+    .faq-question:hover { color: var(--nq-purple); }
+    .faq-item.open .faq-question { color: var(--nq-purple); }
+    .faq-chevron { width: 18px; height: 18px; flex-shrink: 0; color: var(--nq-gray-400); transition: transform 0.2s; }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--nq-purple); }
+    .faq-answer { display: none; padding: 0 18px 16px; font-size: 0.88rem; color: var(--nq-gray-600); line-height: 1.75; }
+    .faq-item.open .faq-answer { display: block; }
+    .faq-answer code { font-family: var(--nq-font-mono); font-size: 0.82rem; background: var(--nq-gray-100); color: var(--nq-purple); padding: 1px 6px; border-radius: 4px; }
+    .faq-answer a { color: var(--nq-purple); text-decoration: none; }
+    .faq-answer a:hover { text-decoration: underline; }
+    .faq-answer ul, .faq-answer ol { margin: 8px 0 8px 20px; }
+    .faq-answer li { margin-bottom: 4px; }
+    .faq-answer .highlight { background: rgba(123,31,162,0.06); border-left: 3px solid var(--nq-purple); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 10px 0; font-size: 0.85rem; }
+    .faq-answer .warning { background: rgba(245,158,11,0.08); border-left: 3px solid var(--nq-amber); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 10px 0; font-size: 0.85rem; color: var(--nq-gray-700); }
+
+    /* CTA Banner */
+    .cta-banner { background: linear-gradient(135deg, rgba(123,31,162,0.08), rgba(92,225,230,0.06)); border: 1px solid rgba(123,31,162,0.2); border-radius: 12px; padding: 2rem; text-align: center; margin-top: 2.5rem; }
+    .cta-banner h3 { font-size: 1.15rem; font-weight: 700; color: var(--nq-dark); margin-bottom: 0.5rem; }
+    .cta-banner p { color: var(--nq-gray-600); font-size: 0.88rem; margin-bottom: 1.25rem; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.7rem 1.5rem; border-radius: var(--nq-radius); font-size: 0.88rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: all 0.2s; }
+    .btn-primary { background: var(--nq-purple); color: #fff; box-shadow: 0 2px 8px rgba(123,31,162,0.25); }
+    .btn-primary:hover { background: var(--nq-purple-hover); }
+    .btn-outline { background: transparent; color: var(--nq-purple); border: 1.5px solid rgba(123,31,162,0.35); margin-left: 8px; }
+    .btn-outline:hover { background: var(--nq-purple); color: #fff; }
+
+    /* Footer */
+    footer { background: var(--nq-dark); color: rgba(255,255,255,0.85); padding: 0 1.5rem; }
+    .footer-inner { max-width: var(--nq-max-w); margin: 0 auto; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1.5rem; padding: 1.5rem 0; }
+    .footer-copy { font-size: 0.78rem; color: rgba(255,255,255,0.45); }
+    .footer-copy a { color: var(--nq-cyan); text-decoration: none; }
+    .footer-links-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .footer-links-row a { font-size: 0.76rem; color: #fff; background: none; text-decoration: none; opacity: 0.6; transition: opacity 0.15s; }
+    .footer-links-row a:hover { opacity: 1; }
+    .footer-divider { border-top: 1px solid rgba(255,255,255,0.07); max-width: var(--nq-max-w); margin: 0 auto; padding: 1rem 0; text-align: center; font-size: 0.72rem; color: rgba(255,255,255,0.25); }
+
+    /* Mobile */
+    .nav-hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 40px; height: 40px; cursor: pointer; border: none; background: none; padding: 6px; border-radius: 8px; }
+    .nav-hamburger span { display: block; height: 2px; border-radius: 2px; background: var(--nq-gray-700); transition: all 0.2s; }
+    @media (max-width: 900px) { .faq-layout { grid-template-columns: 1fr; } .faq-sidebar { position: static; display: none; } }
+    @media (max-width: 640px) {
+      nav { height: 56px; padding: 0 1rem; }
+      nav ul { display: none; }
+      nav ul.open { display: flex; flex-direction: column; position: fixed; top: 56px; left: 0; right: 0; background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid var(--nq-gray-200); padding: 12px 1rem 16px; gap: 2px; z-index: 99; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+      nav ul.open a { padding: 11px 14px; border-radius: 8px; font-size: 0.95rem; min-height: 44px; display: flex; align-items: center; }
+      .nav-hamburger { display: flex !important; }
+      .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+      .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+      .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+      .content { padding: 1.5rem 1rem; }
+      .page-header { padding: 2.5rem 1rem 2rem; }
+      .footer-inner { grid-template-columns: 1fr; gap: 1rem; padding: 1.25rem 0; }
+    }
+  </style>
+</head>
+<body>
+
+<nav role="navigation" aria-label="Main navigation">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand">
+      <div class="nav-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <span class="nav-wordmark"><em>OilGas</em> Nanobot Swarm</span>
+    </a>
+    <ul id="nav-menu" role="list">
+      <li><a href="/">Dashboard</a></li>
+      <li><a href="/#teams">Teams</a></li>
+      <li><a href="/#console">Console</a></li>
+      <li><a href="/#builder">Builder</a></li>
+      <li><a href="/docs-page" >Docs</a></li>
+      <li><a href="/faq" class="active" aria-current="page">FAQ</a></li>
+      <li><a href="/docs" target="_blank" rel="noopener" class="nav-cta">API Docs</a></li>
+    </ul>
+    <button class="nav-hamburger" id="nav-toggle" style="display:none" aria-label="Toggle navigation" aria-expanded="false" aria-controls="nav-menu" onclick="toggleNav()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<section class="page-header">
+  <div class="page-header-inner">
+    <div class="page-badge">&#10067; Frequently Asked Questions</div>
+    <h1>FAQ</h1>
+    <p>Everything you need to know about OilGas Nanobot Swarm — the AI-powered engineering assistant for oil and gas.</p>
+  </div>
+</section>
+
+<main>
+  <div class="content">
+    <div class="faq-layout">
+
+      <!-- Sidebar nav -->
+      <aside class="faq-sidebar">
+        <div class="faq-sidebar-title">Categories</div>
+        <a href="#general" class="faq-nav-link active">General</a>
+        <a href="#engineering" class="faq-nav-link">Engineering Tools</a>
+        <a href="#usage" class="faq-nav-link">Using the Platform</a>
+        <a href="#api" class="faq-nav-link">API & Integration</a>
+        <a href="#accuracy" class="faq-nav-link">Accuracy & Safety</a>
+        <a href="#deployment" class="faq-nav-link">Deployment</a>
+        <a href="#pro" class="faq-nav-link">Pro Edition</a>
+      </aside>
+
+      <!-- FAQ content -->
+      <div class="faq-main">
+
+        <!-- General -->
+        <div class="faq-section" id="general">
+          <h2 class="faq-section-title">
+            <span class="faq-section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></span>
+            General
+          </h2>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">What is OilGas Nanobot Swarm?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">OilGas Nanobot Swarm is a hierarchical multi-agent AI system built for petroleum engineering. It uses a 3-tier Queen → L1 Domain Leads → L2 Sub-Agents architecture to decompose complex engineering problems into specialized tasks and synthesize expert-level answers. It runs on <a href="https://ollama.com" target="_blank" rel="noopener">Ollama Cloud</a> and <a href="https://build.nvidia.com" target="_blank" rel="noopener">NVIDIA NIM</a> — no GPU or local model setup required.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Who is this platform for?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              <ul>
+                <li><strong>Reservoir engineers</strong> — IPR analysis, material balance, decline curves</li>
+                <li><strong>Drilling engineers</strong> — ECD, kick tolerance, casing design verification</li>
+                <li><strong>Production engineers</strong> — well surveillance, optimization, artificial lift</li>
+                <li><strong>HSE professionals</strong> — PSM compliance audits, HAZOP support</li>
+                <li><strong>Operations teams</strong> — daily field briefings, digital morning reports</li>
+                <li><strong>Technical managers</strong> — economic screening, capital allocation</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Is it free to use?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">The web demo at <a href="https://oilgas-nanobot-swarm.vibecaas.app" target="_blank" rel="noopener">oilgas-nanobot-swarm.vibecaas.app</a> is completely free — no account required. The API is open and requires no key for <code>/swarm/run</code>. Self-hosting is also free (MIT license). The upcoming <strong>Pro Edition</strong> will offer dedicated capacity, Redis memory, scheduled teams, and MS 365 integration.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">What AI models does it use?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">The deployed demo uses <strong>Ollama Cloud</strong> as the primary backend (fast, ~3–5s) with <strong>NVIDIA NIM</strong> as fallback. The full self-hosted stack supports Anthropic Claude, local vLLM, and any OpenAI-compatible endpoint. Specific model names are intentionally not exposed in the public API to protect infrastructure details.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Is my data private?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              <div class="warning">⚠️ <strong>Do not submit confidential or proprietary well data</strong> to the public demo. Treat it as a public API.</div>
+              For sensitive data, deploy the self-hosted version on your own infrastructure using Docker Compose, Render, or Railway. The codebase is fully open source and can run air-gapped with a local vLLM server.
+            </div>
+          </div>
+        </div>
+
+        <!-- Engineering Tools -->
+        <div class="faq-section" id="engineering">
+          <h2 class="faq-section-title">
+            <span class="faq-section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></span>
+            Engineering Tools
+          </h2>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">What engineering calculations are supported?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              7 built-in engineering calculators:
+              <ul>
+                <li><code>reservoir_pressure_calc</code> — hydrostatic gradient, BHP, fracture gradient (Hubbert &amp; Willis)</li>
+                <li><code>drilling_engineering_calc</code> — ECD, kick tolerance, mud weight window</li>
+                <li><code>production_engineering_calc</code> — PI, Vogel IPR, Darcy flow, artificial lift</li>
+                <li><code>pipeline_hydraulics_calc</code> — Darcy-Weisbach pressure drop, flow regime, line sizing</li>
+                <li><code>well_control_calc</code> — MAASP, kill mud weight, driller's method</li>
+                <li><code>formation_evaluation_calc</code> — Archie Sw, Wyllie porosity, GR shale volume</li>
+                <li><code>oilgas_regulatory_reference</code> — API standards, BSEE, OSHA PSM, EPA Quad O</li>
+              </ul>
+              See <a href="/docs-page#tools">Engineering Tools docs</a> for full details.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">What is the ECD formula used?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              The standard industry formula:
+              <div class="highlight"><code>ECD (ppg) = MW (ppg) + APL (psi) / (0.052 × TVD (ft))</code></div>
+              Where MW = mud weight, APL = annular pressure loss, TVD = true vertical depth.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Which IPR model is used for production analysis?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              <strong>Vogel (1968)</strong> for solution-gas drive wells:
+              <div class="highlight"><code>q/q_max = 1 - 0.2(Pwf/Pr) - 0.8(Pwf/Pr)²</code></div>
+              <strong>Darcy radial flow</strong> for tight/conventional wells. The system generates a full 11-point IPR curve from a single test point.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Are regulatory references up to date?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              <div class="warning">⚠️ Regulatory references are provided as a starting point only. Always verify against the <strong>current edition</strong> of the applicable standard or regulation. API, BSEE, EPA, and OSHA standards are updated periodically.</div>
+              The system references: API 6A, 7-1, 10A, 16A, 17D, 570, 620/650 · BSEE 30 CFR 250 · OSHA 29 CFR 1910.119 (PSM) · EPA 40 CFR Part 60 Subpart OOOO/OOOOa · NORSOK D-010 · ISO 16530.
+            </div>
+          </div>
+        </div>
+
+        <!-- Using the Platform -->
+        <div class="faq-section" id="usage">
+          <h2 class="faq-section-title">
+            <span class="faq-section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
+            Using the Platform
+          </h2>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">How do I use the Swarm Console?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              <ol>
+                <li>Go to the <a href="/#console">Console</a> section on the dashboard</li>
+                <li>Click a team card to pre-load an example goal, or type your own</li>
+                <li>Click <strong>▶ Run</strong> — no login or API key needed for the demo</li>
+                <li>Results appear in the console output with step-by-step calculations</li>
+              </ol>
+              <div class="highlight">💡 Be specific: include numbers and units. e.g. <em>"Calculate ECD at 10,000 ft TVD with 10.5 ppg mud and 320 psi APL. Fracture gradient is 14.2 ppg — is it safe?"</em></div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">What are Agent Teams and when should I use them?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              Teams are pre-configured agent workflows for common engineering tasks. Use them by specifying <code>"team": "team-name"</code> in your API call or clicking a team card:
+              <ul>
+                <li><code>well-engineering-review</code> — comprehensive well design review</li>
+                <li><code>reservoir-analysis</code> — formation evaluation + IPR</li>
+                <li><code>oilgas-field-briefing</code> — daily ops summary</li>
+                <li><code>hse-compliance-audit</code> — PSM 14-element audit</li>
+              </ul>
+              See the <a href="/#teams">Teams section</a> for all 9 available teams.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">How do I use the Agent Builder and Team Builder?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              Go to the <a href="/#builder">Builder section</a>:
+              <ul>
+                <li><strong>Agent Builder</strong> — describe what you want one agent to do → generates name, system prompt, tools list, and copy-paste Python code</li>
+                <li><strong>Team Builder</strong> — describe a multi-step workflow → generates the full agent team with orchestration, roles, and schedule expression</li>
+              </ul>
+              The generated Python code can be pasted directly into <code>nanobot/teams/oilgas_teams.py</code> in a self-hosted deployment.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Why is the response sometimes slow?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">The demo runs on Vercel's serverless platform with a shared AI backend. Response times:
+              <ul>
+                <li>Simple calculation: 3–8 seconds</li>
+                <li>Complex analysis (hierarchical mode): 10–25 seconds</li>
+                <li>Cold start (first request after inactivity): add 2–4 seconds</li>
+              </ul>
+              For faster, dedicated responses — including background scheduled teams — contact <a href="mailto:info@neuralquantum.ai">info@neuralquantum.ai</a> about the Pro Edition.
+            </div>
+          </div>
+        </div>
+
+        <!-- API & Integration -->
+        <div class="faq-section" id="api">
+          <h2 class="faq-section-title">
+            <span class="faq-section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+            API &amp; Integration
+          </h2>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Do I need an API key?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">No. The <code>POST /swarm/run</code> and <code>POST /v1/chat/completions</code> endpoints are fully public — no API key, no account. Just send a POST request with <code>Content-Type: application/json</code> and a <code>goal</code> field.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Can I use it with the OpenAI SDK?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              Yes — the API is OpenAI-compatible:
+              <div class="highlight">
+                <code>from openai import OpenAI</code><br>
+                <code>client = OpenAI(base_url="https://oilgas-nanobot-swarm.vibecaas.app/v1", api_key="demo")</code><br>
+                <code>response = client.chat.completions.create(model="nanobot-swarm", messages=[...])</code>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">What are the rate limits?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">The public demo is subject to Vercel's serverless function limits and the upstream AI provider rate limits. For production use cases with guaranteed availability and no rate limits, use the self-hosted deployment or contact us about the Pro Edition.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">How do I call it from Python / JavaScript?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              <strong>Python:</strong>
+              <div class="highlight"><code>import requests<br>r = requests.post("https://oilgas-nanobot-swarm.vibecaas.app/swarm/run",<br>&nbsp;&nbsp;json={"goal": "Calculate kill mud weight for SIDPP=380 psi, MW=10.5 ppg, TVD=9800 ft"})<br>print(r.json()["final_answer"])</code></div>
+              <strong>JavaScript:</strong>
+              <div class="highlight"><code>const r = await fetch("https://oilgas-nanobot-swarm.vibecaas.app/swarm/run",<br>&nbsp;&nbsp;{method:"POST", headers:{"Content-Type":"application/json"},<br>&nbsp;&nbsp; body: JSON.stringify({goal: "What is fracture gradient at 10,000 ft?"})});<br>const d = await r.json(); console.log(d.final_answer);</code></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accuracy & Safety -->
+        <div class="faq-section" id="accuracy">
+          <h2 class="faq-section-title">
+            <span class="faq-section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+            Accuracy &amp; Safety
+          </h2>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">How accurate are the calculations?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              The engineering calculators use standard industry equations (Archie 1942, Vogel 1968, Hubbert &amp; Willis 1957, Darcy-Weisbach, etc.) implemented in Python. Numerical accuracy is high for inputs within normal operating ranges.
+              <div class="warning">⚠️ These are <strong>simplified models</strong>. They do not account for multiphase flow corrections, non-Darcy effects, or site-specific geological conditions. Always verify with full-physics simulators and licensed engineers before operational use.</div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Can I use this for actual well operations?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              <div class="warning">⚠️ <strong>No.</strong> This system is a <em>decision-support tool</em> for qualified petroleum engineers. Do not use it as a substitute for:<br>• API-certified well control training or IADC WellSharp certification<br>• Licensed engineer sign-off on well programs<br>• Compliance with applicable BSEE/DOT/EPA regulations<br>• Full-physics reservoir and drilling simulators</div>
+              Use it for preliminary screening, education, and generating starting-point analyses that a licensed engineer then reviews and validates.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Does the AI ever make mistakes?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">Yes. Large language models can hallucinate, misinterpret units, or apply incorrect formula variants. Always check: (1) the equation shown matches the standard reference, (2) inputs are in the correct units, (3) the result is in a physically reasonable range. The system is designed to show its work — if a step looks wrong, it is wrong.</div>
+          </div>
+        </div>
+
+        <!-- Deployment -->
+        <div class="faq-section" id="deployment">
+          <h2 class="faq-section-title">
+            <span class="faq-section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span>
+            Deployment
+          </h2>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">How do I deploy my own instance?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              Three options:
+              <ul>
+                <li><strong>Vercel</strong> (fastest) — one-click deploy, no server needed. Set <code>OLLAMA_API_KEY</code> and you're live in minutes.</li>
+                <li><strong>Docker Compose</strong> — full stack locally. <code>docker compose up -d</code> starts gateway + Redis.</li>
+                <li><strong>Render / Railway</strong> — includes Redis for session memory and background scheduler.</li>
+              </ul>
+              See the <a href="/docs-page#deployment">Deployment Guide</a> for step-by-step instructions.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Do I need a GPU?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">No. The default configuration uses <strong>Ollama Cloud</strong> and <strong>NVIDIA NIM</strong> as cloud AI backends — no GPU, no local model downloads. If you want to run a local model with a GPU, set <code>VLLM_URL</code> to point to your vLLM server.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">What API keys do I need?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              Minimum required: <strong>one of</strong>
+              <ul>
+                <li><code>OLLAMA_API_KEY</code> — from <a href="https://ollama.com" target="_blank" rel="noopener">ollama.com</a> (recommended, fast)</li>
+                <li><code>NVIDIA_API_KEY</code> — from <a href="https://build.nvidia.com" target="_blank" rel="noopener">build.nvidia.com</a></li>
+                <li><code>ANTHROPIC_API_KEY</code> — for Claude (full-stack deployments)</li>
+              </ul>
+              <code>GATEWAY_API_KEY</code> is optional — set it to restrict who can call admin endpoints.
+            </div>
+          </div>
+        </div>
+
+        <!-- Pro Edition -->
+        <div class="faq-section" id="pro">
+          <h2 class="faq-section-title">
+            <span class="faq-section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+            Pro Edition
+          </h2>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">What's included in Pro?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">
+              <ul>
+                <li>Full 3-tier hierarchical swarm (Queen → L1 → L2 agents)</li>
+                <li>Redis-backed session memory and conversation history</li>
+                <li>Obsidian-compatible knowledge vault with vector search</li>
+                <li>Background job scheduler (daily briefings, weekly reviews)</li>
+                <li>Microsoft 365 integration (email, calendar, contacts sync)</li>
+                <li>Custom agent and team creation</li>
+                <li>Priority support and dedicated capacity</li>
+                <li>On-premise / air-gapped deployment support</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">How do I get Pro?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">Email <a href="mailto:info@neuralquantum.ai">info@neuralquantum.ai</a> with your use case and team size. We'll set up a demo and discuss deployment options (cloud or on-premise).</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Can I self-host the full stack for free?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="faq-answer">Yes — the complete codebase is MIT-licensed and available on <a href="https://github.com/ttracx/oilgas-nanobot-swarm" target="_blank" rel="noopener">GitHub</a>. The full hierarchical swarm, Redis state, scheduler, and knowledge vault all work in self-hosted mode. You only need your own AI API keys.</div>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-banner">
+          <h3>Still have questions?</h3>
+          <p>Check the full documentation or reach out to the team.</p>
+          <a href="/docs-page" class="btn btn-primary">View Full Docs</a>
+          <a href="mailto:info@neuralquantum.ai" class="btn btn-outline">Contact Us</a>
+        </div>
+
+      </div><!-- /faq-main -->
+    </div><!-- /faq-layout -->
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-copy">
+      &copy; 2026 <strong>OilGas Nanobot Swarm</strong> powered by
+      <a href="https://vibecaas.com" target="_blank" rel="noopener">VibeCaaS.com</a>
+      a division of <a href="https://neuralquantum.ai" target="_blank" rel="noopener">NeuralQuantum.ai LLC</a>.
+      All rights reserved.
+    </div>
+    <div class="footer-links-row">
+      <a href="/" style="color:#fff;background:none;text-decoration:none;opacity:.65">Dashboard</a>
+      <a href="/faq" style="color:#fff;background:none;text-decoration:none;opacity:.65">FAQ</a>
+      <a href="/docs-page" style="color:#fff;background:none;text-decoration:none;opacity:.65">Docs</a>
+      <a href="https://github.com/ttracx/oilgas-nanobot-swarm" target="_blank" rel="noopener" style="color:#fff;background:none;text-decoration:none;opacity:.65">GitHub</a>
+      <a href="mailto:info@neuralquantum.ai" style="color:#fff;background:none;text-decoration:none;opacity:.65">Contact</a>
+    </div>
+  </div>
+  <div class="footer-divider">
+    &copy; 2026 OilGas Nanobot Swarm powered by VibeCaaS.com a division of NeuralQuantum.ai LLC. All rights reserved.
+  </div>
+</footer>
+
+<script>
+  function toggleFaq(btn) {
+    const item = btn.parentElement;
+    const wasOpen = item.classList.contains('open');
+    // Close all
+    document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+    // Open clicked (unless it was already open)
+    if (!wasOpen) item.classList.add('open');
+  }
+
+  // Sidebar active link on scroll
+  const sections = document.querySelectorAll('.faq-section');
+  const navLinks = document.querySelectorAll('.faq-nav-link');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => link.classList.remove('active'));
+        const active = document.querySelector('.faq-nav-link[href="#' + entry.target.id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  // Open first item in each section by default
+  document.querySelectorAll('.faq-section').forEach(section => {
+    const first = section.querySelector('.faq-item');
+    if (first) first.classList.add('open');
+  });
+
+  // Mobile nav
+  const navToggle = document.getElementById('nav-toggle');
+  const navMenu   = document.getElementById('nav-menu');
+  function toggleNav() {
+    const open = navMenu.classList.toggle('open');
+    if (navToggle) { navToggle.classList.toggle('open', open); navToggle.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+  function closeNav() {
+    navMenu.classList.remove('open');
+    if (navToggle) { navToggle.classList.remove('open'); navToggle.setAttribute('aria-expanded', 'false'); }
+    document.body.style.overflow = '';
+  }
+  const mq = window.matchMedia('(max-width: 640px)');
+  function onMQ(e) { if (navToggle) navToggle.style.display = e.matches ? 'flex' : 'none'; if (!e.matches) closeNav(); }
+  mq.addEventListener('change', onMQ); onMQ(mq);
+  document.addEventListener('click', e => { if (navMenu.classList.contains('open') && !navMenu.contains(e.target) && e.target !== navToggle && !navToggle.contains(e.target)) closeNav(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+</script>
+</body>
+</html>

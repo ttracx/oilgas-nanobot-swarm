@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#050038" />
+  <title>Documentation — OilGas Nanobot Swarm</title>
+  <meta name="description" content="Full documentation for OilGas Nanobot Swarm — API reference, engineering tools, agent teams, and deployment guides." />
+  <style>
+    :root {
+      --nq-purple: #7B1FA2; --nq-purple-hover: #6A1B9A;
+      --nq-dark: #050038; --nq-cyan: #5CE1E6;
+      --nq-emerald: #10B981; --nq-amber: #F59E0B;
+      --nq-gray-50: #F9FAFB; --nq-gray-100: #F3F4F6;
+      --nq-gray-200: #E5E7EB; --nq-gray-300: #D1D5DB;
+      --nq-gray-400: #9CA3AF; --nq-gray-500: #6B7280;
+      --nq-gray-600: #4B5563; --nq-gray-700: #374151; --nq-gray-900: #111827;
+      --nq-radius: 0.5rem; --nq-max-w: 80rem;
+      --nq-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --nq-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sidebar-w: 260px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--nq-gray-50); color: var(--nq-gray-900); font-family: var(--nq-font-sans); min-height: 100vh; display: flex; flex-direction: column; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    /* Nav */
+    nav { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--nq-gray-200); height: 64px; display: flex; align-items: center; padding: 0 1.5rem; }
+    .nav-inner { max-width: var(--nq-max-w); margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--nq-purple), var(--nq-cyan)); display: flex; align-items: center; justify-content: center; }
+    .nav-logo svg { width: 18px; height: 18px; color: #fff; }
+    .nav-wordmark { font-size: 1rem; font-weight: 700; color: var(--nq-gray-900); letter-spacing: -0.01em; }
+    .nav-wordmark em { color: var(--nq-purple); font-style: normal; }
+    nav ul { display: flex; align-items: center; gap: 4px; list-style: none; }
+    nav ul a { color: var(--nq-gray-600); text-decoration: none; font-size: 0.875rem; font-weight: 500; padding: 6px 14px; border-radius: var(--nq-radius); transition: all 0.15s; }
+    nav ul a:hover { background: var(--nq-gray-100); color: var(--nq-gray-900); }
+    nav ul a.active { color: var(--nq-purple); font-weight: 600; }
+    .nav-cta { background: var(--nq-purple) !important; color: #fff !important; font-weight: 600 !important; padding: 6px 18px !important; box-shadow: 0 2px 8px rgba(123,31,162,0.25); }
+    .nav-cta:hover { background: var(--nq-purple-hover) !important; }
+
+    /* Page header */
+    .page-header { background: var(--nq-dark); padding: 3.5rem 1.5rem 3rem; text-align: center; position: relative; overflow: hidden; }
+    .page-header::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(123,31,162,0.3) 0%, transparent 65%); pointer-events: none; }
+    .page-header-inner { max-width: var(--nq-max-w); margin: 0 auto; position: relative; }
+    .page-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 99px; background: rgba(123,31,162,0.2); border: 1px solid rgba(123,31,162,0.4); color: #c084fc; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1rem; }
+    .page-header h1 { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 700; color: var(--nq-cyan); margin-bottom: 0.75rem; }
+    .page-header p { color: rgba(255,255,255,0.6); font-size: 1rem; max-width: 40rem; margin: 0 auto; }
+    .version-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 1rem; padding: 4px 12px; border-radius: 99px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--nq-emerald); font-size: 0.75rem; font-weight: 600; }
+
+    /* Docs layout */
+    main { flex: 1; }
+    .docs-layout { display: flex; max-width: var(--nq-max-w); margin: 0 auto; gap: 0; }
+    .docs-sidebar { width: var(--sidebar-w); flex-shrink: 0; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; border-right: 1px solid var(--nq-gray-200); padding: 1.5rem 0; background: #fff; }
+    .sidebar-section { margin-bottom: 1.25rem; }
+    .sidebar-section-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--nq-gray-400); padding: 0 1.25rem; margin-bottom: 4px; }
+    .sidebar-link { display: block; padding: 6px 1.25rem; font-size: 0.82rem; color: var(--nq-gray-600); text-decoration: none; transition: all 0.15s; border-left: 2px solid transparent; }
+    .sidebar-link:hover { color: var(--nq-purple); background: rgba(123,31,162,0.04); }
+    .sidebar-link.active { color: var(--nq-purple); border-left-color: var(--nq-purple); background: rgba(123,31,162,0.05); font-weight: 600; }
+
+    /* Docs content */
+    .docs-content { flex: 1; min-width: 0; padding: 2.5rem 2rem; }
+    .doc-section { margin-bottom: 3.5rem; scroll-margin-top: 80px; }
+    .doc-section h2 { font-size: 1.5rem; font-weight: 700; color: var(--nq-dark); margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--nq-gray-200); }
+    .doc-section h3 { font-size: 1.05rem; font-weight: 700; color: var(--nq-dark); margin: 1.5rem 0 0.75rem; }
+    .doc-section h4 { font-size: 0.92rem; font-weight: 600; color: var(--nq-purple); margin: 1.25rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .doc-section p { color: var(--nq-gray-600); font-size: 0.9rem; margin-bottom: 0.75rem; }
+    .doc-section ul, .doc-section ol { color: var(--nq-gray-600); font-size: 0.9rem; margin: 0.5rem 0 0.75rem 1.25rem; }
+    .doc-section li { margin-bottom: 4px; }
+    .doc-section a { color: var(--nq-purple); text-decoration: none; }
+    .doc-section a:hover { text-decoration: underline; }
+
+    /* Code blocks */
+    pre { background: var(--nq-dark); color: #a5d6a7; border-radius: var(--nq-radius); padding: 1rem 1.25rem; font-family: var(--nq-font-mono); font-size: 0.8rem; line-height: 1.65; overflow-x: auto; margin: 0.75rem 0; border: 1px solid rgba(255,255,255,0.06); }
+    code { font-family: var(--nq-font-mono); font-size: 0.82rem; background: var(--nq-gray-100); color: var(--nq-purple); padding: 1px 6px; border-radius: 4px; }
+    pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+
+    /* Tables */
+    .doc-table-wrap { overflow-x: auto; margin: 0.75rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th { background: var(--nq-gray-50); text-align: left; padding: 10px 14px; font-weight: 600; color: var(--nq-gray-700); border-bottom: 2px solid var(--nq-gray-200); white-space: nowrap; }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--nq-gray-100); color: var(--nq-gray-600); vertical-align: top; }
+    tr:hover td { background: var(--nq-gray-50); }
+
+    /* Callouts */
+    .callout { padding: 12px 16px; border-radius: var(--nq-radius); margin: 1rem 0; font-size: 0.88rem; line-height: 1.6; }
+    .callout-info { background: rgba(123,31,162,0.06); border-left: 3px solid var(--nq-purple); color: var(--nq-gray-700); }
+    .callout-warn { background: rgba(245,158,11,0.08); border-left: 3px solid var(--nq-amber); color: var(--nq-gray-700); }
+    .callout-tip { background: rgba(16,185,129,0.08); border-left: 3px solid var(--nq-emerald); color: var(--nq-gray-700); }
+
+    /* Method badges */
+    .method { display: inline-block; font-family: var(--nq-font-mono); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-right: 6px; }
+    .method-get { background: rgba(16,185,129,0.1); color: #059669; border: 1px solid rgba(16,185,129,0.25); }
+    .method-post { background: rgba(123,31,162,0.1); color: var(--nq-purple); border: 1px solid rgba(123,31,162,0.25); }
+    .endpoint-row { display: flex; align-items: baseline; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--nq-gray-100); }
+    .endpoint-path { font-family: var(--nq-font-mono); font-size: 0.85rem; color: var(--nq-gray-900); font-weight: 600; }
+    .endpoint-desc { font-size: 0.82rem; color: var(--nq-gray-500); }
+
+    /* Tool cards */
+    .tool-card { border: 1px solid var(--nq-gray-200); border-left: 3px solid var(--nq-purple); border-radius: var(--nq-radius); padding: 1rem 1.25rem; margin-bottom: 12px; background: #fff; }
+    .tool-name { font-family: var(--nq-font-mono); font-size: 0.85rem; color: var(--nq-purple); font-weight: 700; margin-bottom: 4px; }
+    .tool-desc { font-size: 0.85rem; color: var(--nq-gray-600); }
+
+    /* Team cards */
+    .team-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--nq-gray-100); }
+    .team-mode { font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; flex-shrink: 0; }
+    .mode-h { background: rgba(123,31,162,0.1); color: var(--nq-purple); border: 1px solid rgba(123,31,162,0.25); }
+    .mode-f { background: rgba(16,185,129,0.08); color: #059669; border: 1px solid rgba(16,185,129,0.25); }
+    .team-info { flex: 1; }
+    .team-name-txt { font-family: var(--nq-font-mono); font-size: 0.82rem; font-weight: 700; color: var(--nq-dark); }
+    .team-desc-txt { font-size: 0.8rem; color: var(--nq-gray-500); }
+
+    /* CTA */
+    .cta-banner { background: linear-gradient(135deg, rgba(123,31,162,0.08), rgba(92,225,230,0.06)); border: 1px solid rgba(123,31,162,0.2); border-radius: 12px; padding: 2rem; text-align: center; margin-top: 2rem; }
+    .cta-banner h3 { font-size: 1.1rem; font-weight: 700; color: var(--nq-dark); margin-bottom: 0.5rem; }
+    .cta-banner p { color: var(--nq-gray-600); font-size: 0.88rem; margin-bottom: 1.25rem; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.7rem 1.5rem; border-radius: var(--nq-radius); font-size: 0.88rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: all 0.2s; }
+    .btn-primary { background: var(--nq-purple); color: #fff; }
+    .btn-primary:hover { background: var(--nq-purple-hover); }
+    .btn-outline { background: transparent; color: var(--nq-purple); border: 1.5px solid rgba(123,31,162,0.35); margin-left: 8px; }
+    .btn-outline:hover { background: var(--nq-purple); color: #fff; }
+
+    /* Footer */
+    footer { background: var(--nq-dark); padding: 0 1.5rem; }
+    .footer-inner { max-width: var(--nq-max-w); margin: 0 auto; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1.5rem; padding: 1.5rem 0; }
+    .footer-copy { font-size: 0.78rem; color: rgba(255,255,255,0.45); }
+    .footer-copy a { color: var(--nq-cyan); text-decoration: none; }
+    .footer-links-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .footer-links-row a { font-size: 0.76rem; color: #fff; background: none; text-decoration: none; opacity: 0.6; transition: opacity 0.15s; }
+    .footer-links-row a:hover { opacity: 1; }
+    .footer-divider { border-top: 1px solid rgba(255,255,255,0.07); max-width: var(--nq-max-w); margin: 0 auto; padding: 1rem 0; text-align: center; font-size: 0.72rem; color: rgba(255,255,255,0.25); }
+
+    /* Mobile */
+    .nav-hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 40px; height: 40px; cursor: pointer; border: none; background: none; padding: 6px; border-radius: 8px; }
+    .nav-hamburger span { display: block; height: 2px; border-radius: 2px; background: var(--nq-gray-700); transition: all 0.2s; }
+    @media (max-width: 900px) { .docs-sidebar { display: none; } .docs-content { padding: 2rem 1.25rem; } }
+    @media (max-width: 640px) {
+      nav { height: 56px; padding: 0 1rem; }
+      nav ul { display: none; }
+      nav ul.open { display: flex; flex-direction: column; position: fixed; top: 56px; left: 0; right: 0; background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid var(--nq-gray-200); padding: 12px 1rem 16px; gap: 2px; z-index: 99; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+      nav ul.open a { padding: 11px 14px; border-radius: 8px; font-size: 0.95rem; min-height: 44px; display: flex; align-items: center; }
+      .nav-hamburger { display: flex !important; }
+      .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+      .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+      .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+      .docs-content { padding: 1.5rem 1rem; }
+      .page-header { padding: 2.5rem 1rem 2rem; }
+      .footer-inner { grid-template-columns: 1fr; gap: 1rem; padding: 1.25rem 0; }
+    }
+  </style>
+</head>
+<body>
+
+<nav role="navigation" aria-label="Main navigation">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand">
+      <div class="nav-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <span class="nav-wordmark"><em>OilGas</em> Nanobot Swarm</span>
+    </a>
+    <ul id="nav-menu" role="list">
+      <li><a href="/">Dashboard</a></li>
+      <li><a href="/#teams">Teams</a></li>
+      <li><a href="/#console">Console</a></li>
+      <li><a href="/#builder">Builder</a></li>
+      <li><a href="/docs-page" class="active" aria-current="page">Docs</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/docs" target="_blank" rel="noopener" class="nav-cta">API Docs</a></li>
+    </ul>
+    <button class="nav-hamburger" id="nav-toggle" style="display:none" aria-label="Toggle navigation" aria-expanded="false" aria-controls="nav-menu" onclick="toggleNav()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<section class="page-header">
+  <div class="page-header-inner">
+    <div class="page-badge">&#128196; Documentation</div>
+    <h1>OilGas Nanobot Swarm</h1>
+    <p>Complete reference for the AI-powered engineering swarm — API, tools, teams, deployment, and development.</p>
+    <div class="version-badge">&#9679; v2.0.0 &nbsp;&middot;&nbsp; Live at oilgas-nanobot-swarm.vibecaas.app</div>
+  </div>
+</section>
+
+<main>
+  <div class="docs-layout">
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Getting Started</div>
+        <a href="#overview" class="sidebar-link active">Overview</a>
+        <a href="#quickstart" class="sidebar-link">Quick Start</a>
+        <a href="#architecture" class="sidebar-link">Architecture</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">API Reference</div>
+        <a href="#api-endpoints" class="sidebar-link">Endpoints</a>
+        <a href="#api-request" class="sidebar-link">Request Format</a>
+        <a href="#api-response" class="sidebar-link">Response Format</a>
+        <a href="#api-examples" class="sidebar-link">Code Examples</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Engineering Tools</div>
+        <a href="#tools" class="sidebar-link">All 7 Tools</a>
+        <a href="#tools-drilling" class="sidebar-link">Drilling</a>
+        <a href="#tools-reservoir" class="sidebar-link">Reservoir</a>
+        <a href="#tools-production" class="sidebar-link">Production</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Agent Teams</div>
+        <a href="#teams" class="sidebar-link">All 9 Teams</a>
+        <a href="#teams-builder" class="sidebar-link">Team Builder</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Deployment</div>
+        <a href="#deployment" class="sidebar-link">Vercel</a>
+        <a href="#deployment-render" class="sidebar-link">Render / Railway</a>
+        <a href="#deployment-docker" class="sidebar-link">Docker Compose</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Development</div>
+        <a href="#dev-tools" class="sidebar-link">Adding Tools</a>
+        <a href="#dev-teams" class="sidebar-link">Adding Teams</a>
+        <a href="#dev-env" class="sidebar-link">Environment Vars</a>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <div class="docs-content">
+
+      <!-- Overview -->
+      <div class="doc-section" id="overview">
+        <h2>Overview</h2>
+        <p><strong>OilGas Nanobot Swarm</strong> is an open-source hierarchical multi-agent AI system for oil and gas engineering. It uses a 3-tier Queen → L1 Domain Leads → L2 Sub-Agents architecture to decompose complex engineering problems and deliver expert-level analysis.</p>
+        <div class="callout callout-info">&#9432; The public demo at <a href="https://oilgas-nanobot-swarm.vibecaas.app" target="_blank" rel="noopener">oilgas-nanobot-swarm.vibecaas.app</a> is fully functional with no authentication required. Try the Swarm Console directly.</div>
+
+        <h3>Key Features</h3>
+        <ul>
+          <li>7 built-in petroleum engineering calculators (drilling, reservoir, production, pipeline, well control, petrophysics, regulatory)</li>
+          <li>9 pre-configured O&amp;G agent teams with specialized workflows</li>
+          <li>AI Agent Builder and Team Builder — generate custom agents from natural language</li>
+          <li>OpenAI-compatible API — works with any OpenAI SDK client</li>
+          <li>NeuralQuantum.ai branded web dashboard with mobile support</li>
+          <li>Deployable to Vercel, Render, Railway, or Docker Compose</li>
+        </ul>
+      </div>
+
+      <!-- Quick Start -->
+      <div class="doc-section" id="quickstart">
+        <h2>Quick Start</h2>
+        <h3>Option 1 — Use the live demo (no setup)</h3>
+        <pre>curl -X POST https://oilgas-nanobot-swarm.vibecaas.app/swarm/run \
+  -H "Content-Type: application/json" \
+  -d '{"goal": "Calculate ECD at 10,000 ft TVD, 10.5 ppg mud, 320 psi APL"}'</pre>
+
+        <h3>Option 2 — Deploy to Vercel</h3>
+        <pre>npm i -g vercel
+git clone https://github.com/ttracx/oilgas-nanobot-swarm.git
+cd oilgas-nanobot-swarm
+vercel --prod
+# Set OLLAMA_API_KEY in Vercel dashboard</pre>
+
+        <h3>Option 3 — Docker Compose (local)</h3>
+        <pre>git clone https://github.com/ttracx/oilgas-nanobot-swarm.git
+cd oilgas-nanobot-swarm
+cp .env.example .env   # add OLLAMA_API_KEY
+docker compose up -d
+curl http://localhost:8100/health</pre>
+      </div>
+
+      <!-- Architecture -->
+      <div class="doc-section" id="architecture">
+        <h2>Architecture</h2>
+        <p>The swarm uses a 3-tier hierarchy:</p>
+        <div class="doc-table-wrap">
+          <table>
+            <tr><th>Tier</th><th>Role</th><th>Count</th><th>Responsibility</th></tr>
+            <tr><td>L0</td><td>Queen Orchestrator</td><td>1</td><td>Decomposes goals, assigns L1 tasks, synthesizes final answer</td></tr>
+            <tr><td>L1</td><td>Domain Leads</td><td>6</td><td>Coder, Researcher, Analyst, Validator, Executor, Architect</td></tr>
+            <tr><td>L2</td><td>Sub-Agents</td><td>15</td><td>Narrow specialists (planner, writer, searcher, critiquer, etc.)</td></tr>
+          </table>
+        </div>
+        <p>The <strong>Vercel deployment</strong> uses a streamlined single-call API against Ollama Cloud or NVIDIA NIM. The <strong>full-stack deployment</strong> (Docker/Render/Railway) includes Redis state, knowledge vault, and background scheduler.</p>
+      </div>
+
+      <!-- API Endpoints -->
+      <div class="doc-section" id="api-endpoints">
+        <h2>API Endpoints</h2>
+        <p><strong>Base URL:</strong> <code>https://oilgas-nanobot-swarm.vibecaas.app</code></p>
+        <div class="endpoint-row"><span class="method method-get">GET</span><span class="endpoint-path">/health</span><span class="endpoint-desc">Public health check</span></div>
+        <div class="endpoint-row"><span class="method method-post">POST</span><span class="endpoint-path">/swarm/run</span><span class="endpoint-desc">Dispatch engineering task (public demo)</span></div>
+        <div class="endpoint-row"><span class="method method-post">POST</span><span class="endpoint-path">/v1/chat/completions</span><span class="endpoint-desc">OpenAI-compatible chat completions</span></div>
+        <div class="endpoint-row"><span class="method method-post">POST</span><span class="endpoint-path">/agent/build</span><span class="endpoint-desc">Generate agent config from description</span></div>
+        <div class="endpoint-row"><span class="method method-post">POST</span><span class="endpoint-path">/team/build</span><span class="endpoint-desc">Generate team config from description</span></div>
+        <div class="endpoint-row"><span class="method method-get">GET</span><span class="endpoint-path">/v1/models</span><span class="endpoint-desc">List available models</span></div>
+        <div class="endpoint-row"><span class="method method-get">GET</span><span class="endpoint-path">/swarm/topology</span><span class="endpoint-desc">Agent hierarchy</span></div>
+        <div class="endpoint-row"><span class="method method-get">GET</span><span class="endpoint-path">/docs</span><span class="endpoint-desc">Interactive Swagger UI</span></div>
+      </div>
+
+      <!-- Request Format -->
+      <div class="doc-section" id="api-request">
+        <h2>Request Format</h2>
+        <h4>POST /swarm/run</h4>
+        <pre>{
+  "goal": "Your engineering question (required, max 10,000 chars)",
+  "mode": "hierarchical",   // or "flat" (optional)
+  "team": "well-engineering-review",  // optional named team
+  "metadata": {}            // optional context
+}</pre>
+        <h4>POST /agent/build &amp; /team/build</h4>
+        <pre>{
+  "description": "Describe what you want (10–2000 chars)"
+}</pre>
+      </div>
+
+      <!-- Response Format -->
+      <div class="doc-section" id="api-response">
+        <h2>Response Format</h2>
+        <h4>POST /swarm/run response</h4>
+        <pre>{
+  "success": true,
+  "session_id": "nq-1772088336060",
+  "goal": "...",
+  "final_answer": "Step-by-step engineering analysis...",
+  "subtask_count": 1,
+  "duration_seconds": 7.6,
+  "powered_by": "NeuralQuantum.ai"
+}</pre>
+        <h4>POST /agent/build response</h4>
+        <pre>{
+  "success": true,
+  "type": "agent",
+  "config": {
+    "name": "production-decline-monitor",
+    "mode": "hierarchical",
+    "tools": ["production_engineering_calc", ...],
+    "system_prompt": "You are...",
+    "python_code": "from nanobot.scheduler...",
+    "use_cases": [...],
+    "example_goal": "..."
+  },
+  "duration_seconds": 6.1
+}</pre>
+      </div>
+
+      <!-- Code Examples -->
+      <div class="doc-section" id="api-examples">
+        <h2>Code Examples</h2>
+        <h3>Python (requests)</h3>
+        <pre>import requests
+
+r = requests.post(
+    "https://oilgas-nanobot-swarm.vibecaas.app/swarm/run",
+    json={
+        "goal": "Calculate kill mud weight. SIDPP=380 psi, MW=10.5 ppg, TVD=9800 ft",
+        "team": "well-engineering-review"
+    }
+)
+print(r.json()["final_answer"])</pre>
+
+        <h3>Python (OpenAI SDK)</h3>
+        <pre>from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://oilgas-nanobot-swarm.vibecaas.app/v1",
+    api_key="demo",
+)
+response = client.chat.completions.create(
+    model="nanobot-swarm",
+    messages=[{"role": "user", "content": "Explain Archie's equation with an example"}],
+)
+print(response.choices[0].message.content)</pre>
+
+        <h3>JavaScript (fetch)</h3>
+        <pre>const res = await fetch(
+  "https://oilgas-nanobot-swarm.vibecaas.app/swarm/run",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      goal: "Design frac program for Wolfcamp A: 8,500 ft lateral, target 2000 BOPD IP",
+      team: "completions-design"
+    })
+  }
+);
+const data = await res.json();
+console.log(data.final_answer);</pre>
+
+        <h3>cURL</h3>
+        <pre>curl -X POST https://oilgas-nanobot-swarm.vibecaas.app/swarm/run \
+  -H "Content-Type: application/json" \
+  -d '{"goal": "Run HSE PSM 14-element compliance audit for offshore platform"}'</pre>
+      </div>
+
+      <!-- Engineering Tools -->
+      <div class="doc-section" id="tools">
+        <h2>Engineering Tools</h2>
+        <p>All agents have access to these 7 built-in calculators. Reference them in goals or let the AI invoke them automatically.</p>
+
+        <div id="tools-drilling">
+          <h3>Drilling Engineering</h3>
+          <div class="tool-card">
+            <div class="tool-name">reservoir_pressure_calc</div>
+            <div class="tool-desc">Hydrostatic gradient, BHP from wellhead, pore pressure, fracture gradient (Hubbert &amp; Willis 1957), pressure gradient from density. Formula: <code>FG = (ν/(1-ν)) × (OBG - PP) + PP</code></div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">drilling_engineering_calc</div>
+            <div class="tool-desc">ECD, kick tolerance, mud weight window, surge/swab. Formula: <code>ECD = MW + APL / (0.052 × TVD)</code></div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">well_control_calc</div>
+            <div class="tool-desc">MAASP, kill mud weight, driller's method kill schedule. Formula: <code>KMW = MW + SIDPP / (0.052 × TVD)</code></div>
+          </div>
+        </div>
+
+        <div id="tools-reservoir">
+          <h3>Reservoir &amp; Petrophysics</h3>
+          <div class="tool-card">
+            <div class="tool-name">production_engineering_calc</div>
+            <div class="tool-desc">Productivity Index, Vogel IPR (11-point curve), Darcy radial flow, artificial lift selection. Reference: Vogel (1968): <code>q/qmax = 1 - 0.2(Pwf/Pr) - 0.8(Pwf/Pr)²</code></div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">formation_evaluation_calc</div>
+            <div class="tool-desc">Archie water saturation (1942), Wyllie sonic porosity (1956), GR shale volume (linear), Timur permeability. Formula: <code>Sw^n = (a × Rw) / (φ^m × Rt)</code></div>
+          </div>
+        </div>
+
+        <div id="tools-production">
+          <h3>Midstream &amp; Regulatory</h3>
+          <div class="tool-card">
+            <div class="tool-name">pipeline_hydraulics_calc</div>
+            <div class="tool-desc">Pressure drop (Darcy-Weisbach), flow regime (Reynolds number), line sizing, erosional velocity (API 14E). Formula: <code>ΔP = f × (L/D) × (ρv²/2)</code></div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">oilgas_regulatory_reference</div>
+            <div class="tool-desc">API standards (6A, 16A, 570, 650), BSEE/BOEM 30 CFR 250, OSHA PSM 14 elements (29 CFR 1910.119), EPA Quad O/OOOOa, NORSOK D-010, ISO 16530.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Teams -->
+      <div class="doc-section" id="teams">
+        <h2>Agent Teams</h2>
+        <p>Use <code>"team": "team-name"</code> in your <code>/swarm/run</code> request to activate a pre-configured workflow.</p>
+
+        <div class="team-row"><span class="team-mode mode-h">Hierarchical</span><div class="team-info"><div class="team-name-txt">well-engineering-review</div><div class="team-desc-txt">Casing design, ECD, kick tolerance, MAASP, regulatory compliance</div></div></div>
+        <div class="team-row"><span class="team-mode mode-h">Hierarchical</span><div class="team-info"><div class="team-name-txt">reservoir-analysis</div><div class="team-desc-txt">IPR curves, Archie Sw, formation eval, volumetric reserves</div></div></div>
+        <div class="team-row"><span class="team-mode mode-f">Flat</span><div class="team-info"><div class="team-name-txt">drilling-ops-daily</div><div class="team-desc-txt">Daily drilling report, NPT analysis, cost vs AFE tracking</div></div></div>
+        <div class="team-row"><span class="team-mode mode-h">Hierarchical</span><div class="team-info"><div class="team-name-txt">production-optimization</div><div class="team-desc-txt">AI lift tuning, decline curves, waterflood performance</div></div></div>
+        <div class="team-row"><span class="team-mode mode-h">Hierarchical</span><div class="team-info"><div class="team-name-txt">pipeline-integrity</div><div class="team-desc-txt">Corrosion assessment, ILI anomaly ranking, MAOP verification</div></div></div>
+        <div class="team-row"><span class="team-mode mode-h">Hierarchical</span><div class="team-info"><div class="team-name-txt">hse-compliance-audit</div><div class="team-desc-txt">OSHA PSM 14 elements, BSEE SEMS, well integrity, EPA emissions</div></div></div>
+        <div class="team-row"><span class="team-mode mode-h">Hierarchical</span><div class="team-info"><div class="team-name-txt">well-economics</div><div class="team-desc-txt">AFE, NPV10/IRR, break-even price, EUR sensitivity P10/P50/P90</div></div></div>
+        <div class="team-row"><span class="team-mode mode-f">Flat</span><div class="team-info"><div class="team-name-txt">oilgas-field-briefing</div><div class="team-desc-txt">Daily ops briefing with production summary, safety, 24h plan</div></div></div>
+        <div class="team-row"><span class="team-mode mode-h">Hierarchical</span><div class="team-info"><div class="team-name-txt">completions-design</div><div class="team-desc-txt">Frac stage design, proppant/fluid selection, cluster spacing, EUR</div></div></div>
+
+        <div id="teams-builder">
+          <h3>Custom Team Builder</h3>
+          <p>Generate your own team from a description using the <a href="/#builder">Builder UI</a> or API:</p>
+          <pre>curl -X POST https://oilgas-nanobot-swarm.vibecaas.app/team/build \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Weekly waterflood performance review team that tracks injection rates, voidage replacement ratio, and pattern efficiency across all injectors"}'</pre>
+          <p>Returns Python <code>register_team(AgentTeam(...))</code> code ready to paste into your deployment.</p>
+        </div>
+      </div>
+
+      <!-- Deployment -->
+      <div class="doc-section" id="deployment">
+        <h2>Deployment — Vercel</h2>
+        <div class="callout callout-tip">&#10003; <strong>Recommended for getting started.</strong> Static dashboard + Python serverless API. No server management.</div>
+
+        <h3>Critical: vercel.json must use <code>functions</code> config</h3>
+        <pre>{
+  "version": 2,
+  "functions": { "api/index.py": { "maxDuration": 60 } },
+  "rewrites": [
+    { "source": "/", "destination": "/nanobot/static/index.html" },
+    { "source": "/health", "destination": "/api/index.py" },
+    { "source": "/swarm/:path*", "destination": "/api/index.py" },
+    ...
+  ]
+}</pre>
+        <div class="callout callout-warn">&#9888; Do NOT use <code>"builds"</code> config — it causes FUNCTION_INVOCATION_FAILED. Do NOT add <code>handler = app</code> — Vercel auto-detects FastAPI <code>app</code>.</div>
+
+        <h3>Required environment variables</h3>
+        <div class="doc-table-wrap">
+          <table>
+            <tr><th>Variable</th><th>Required</th><th>Description</th></tr>
+            <tr><td><code>OLLAMA_API_KEY</code></td><td>✅ One of these</td><td>Ollama Cloud API key (primary, ~3-5s)</td></tr>
+            <tr><td><code>NVIDIA_API_KEY</code></td><td>✅ One of these</td><td>NVIDIA NIM API key (fallback)</td></tr>
+            <tr><td><code>GATEWAY_API_KEY</code></td><td>Optional</td><td>Admin endpoint auth key</td></tr>
+          </table>
+        </div>
+        <div class="callout callout-warn">&#9888; Always set env vars with <code>printf '%s' "value" | vercel env add KEY production</code> — never use <code>echo</code> (adds trailing newline that breaks auth).</div>
+
+        <div id="deployment-render">
+          <h3>Render / Railway (Full Stack)</h3>
+          <p>Includes Redis for session memory and background scheduler.</p>
+          <pre>render deploy --config render.yaml
+# or
+railway up</pre>
+          <p>Set: <code>OLLAMA_API_KEY</code>, <code>NVIDIA_API_KEY</code>, <code>GATEWAY_API_KEY</code>, <code>ENABLE_OILGAS_TEAMS=true</code></p>
+        </div>
+
+        <div id="deployment-docker">
+          <h3>Docker Compose (Local)</h3>
+          <pre>cp .env.example .env
+# Edit .env — add OLLAMA_API_KEY
+docker compose up -d
+curl http://localhost:8100/health</pre>
+          <p>Starts the FastAPI gateway on port 8100 and Redis on port 6379.</p>
+        </div>
+      </div>
+
+      <!-- Development -->
+      <div class="doc-section" id="dev-tools">
+        <h2>Adding a Custom Tool</h2>
+        <p>Implement the <code>BaseTool</code> ABC in <code>nanobot/tools/</code>:</p>
+        <pre>from nanobot.tools.base import BaseTool, ToolResult
+import time
+
+class MyTool(BaseTool):
+    name = "my_calc"
+    description = "Calculate [something]. Used for [when]."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "value": {"type": "number", "description": "Input in ppg"},
+        },
+        "required": ["value"],
+    }
+
+    async def run(self, value: float, **kwargs) -> ToolResult:
+        start = time.time()
+        result = value * 0.052
+        return ToolResult(
+            tool_name=self.name,
+            success=True,
+            output=f"Result: {result:.4f} psi/ft",
+            raw={"result": result},
+            duration_seconds=time.time() - start,
+        )</pre>
+        <p>Register it in <code>nanobot/tools/oilgas_tools.py</code> → <code>get_oilgas_tools()</code>.</p>
+
+        <div id="dev-teams">
+          <h2>Adding a Custom Team</h2>
+          <p>Register in <code>nanobot/teams/oilgas_teams.py</code>:</p>
+          <pre>from nanobot.scheduler.agent_teams import AgentTeam, register_team
+
+register_team(AgentTeam(
+    name="my-team",
+    description="One-line dashboard description",
+    mode="hierarchical",  # or "flat"
+    system_prompt="""You are the [Role] Team.
+
+Workflow:
+1. Use [tool_name] to [action]
+2. Analyze results and synthesize
+
+Output Format:
+## Summary
+## Findings
+## Recommendations""",
+    inject_knowledge=True,
+    update_knowledge_after=True,
+    max_tokens=4096,
+    temperature=0.1,
+))</pre>
+        </div>
+
+        <div id="dev-env">
+          <h2>Environment Variables</h2>
+          <div class="doc-table-wrap">
+            <table>
+              <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+              <tr><td><code>OLLAMA_API_KEY</code></td><td>—</td><td>Ollama Cloud key</td></tr>
+              <tr><td><code>NVIDIA_API_KEY</code></td><td>—</td><td>NVIDIA NIM key</td></tr>
+              <tr><td><code>ANTHROPIC_API_KEY</code></td><td>—</td><td>Claude API key (full-stack)</td></tr>
+              <tr><td><code>ANTHROPIC_MODEL</code></td><td>claude-sonnet-4-20250514</td><td>Claude model ID</td></tr>
+              <tr><td><code>GATEWAY_API_KEY</code></td><td>—</td><td>Admin auth (optional)</td></tr>
+              <tr><td><code>REDIS_HOST</code></td><td>127.0.0.1</td><td>Redis host</td></tr>
+              <tr><td><code>REDIS_PORT</code></td><td>6379</td><td>Redis port</td></tr>
+              <tr><td><code>ENABLE_OILGAS_TEAMS</code></td><td>true</td><td>Load O&amp;G teams on startup</td></tr>
+              <tr><td><code>VLLM_URL</code></td><td>—</td><td>Local vLLM endpoint (optional)</td></tr>
+              <tr><td><code>VAULT_PATH</code></td><td>~/.nellie/vault</td><td>Knowledge vault path</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta-banner">
+        <h3>&#11088; Pro Edition Coming Soon</h3>
+        <p>Full hierarchical swarm, Redis memory, knowledge vault, background scheduler, MS 365 integration, and dedicated support.</p>
+        <a href="mailto:info@neuralquantum.ai" class="btn btn-primary">Contact Us</a>
+        <a href="/faq" class="btn btn-outline">View FAQ</a>
+      </div>
+
+    </div><!-- /docs-content -->
+  </div><!-- /docs-layout -->
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-copy">
+      &copy; 2026 <strong>OilGas Nanobot Swarm</strong> powered by
+      <a href="https://vibecaas.com" target="_blank" rel="noopener">VibeCaaS.com</a>
+      a division of <a href="https://neuralquantum.ai" target="_blank" rel="noopener">NeuralQuantum.ai LLC</a>.
+      All rights reserved.
+    </div>
+    <div class="footer-links-row">
+      <a href="/" style="color:#fff;background:none;text-decoration:none;opacity:.65">Dashboard</a>
+      <a href="/faq" style="color:#fff;background:none;text-decoration:none;opacity:.65">FAQ</a>
+      <a href="/docs-page" style="color:#fff;background:none;text-decoration:none;opacity:.65">Docs</a>
+      <a href="https://github.com/ttracx/oilgas-nanobot-swarm" target="_blank" rel="noopener" style="color:#fff;background:none;text-decoration:none;opacity:.65">GitHub</a>
+      <a href="mailto:info@neuralquantum.ai" style="color:#fff;background:none;text-decoration:none;opacity:.65">Contact</a>
+    </div>
+  </div>
+  <div class="footer-divider">
+    &copy; 2026 OilGas Nanobot Swarm powered by VibeCaaS.com a division of NeuralQuantum.ai LLC. All rights reserved.
+  </div>
+</footer>
+
+<script>
+  // Sidebar active on scroll
+  const sections = document.querySelectorAll('.doc-section');
+  const links = document.querySelectorAll('.sidebar-link');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector('.sidebar-link[href="#' + e.target.id + '"]');
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  sections.forEach(s => obs.observe(s));
+
+  // Mobile nav
+  const navToggle = document.getElementById('nav-toggle');
+  const navMenu   = document.getElementById('nav-menu');
+  function toggleNav() {
+    const open = navMenu.classList.toggle('open');
+    if (navToggle) { navToggle.classList.toggle('open', open); navToggle.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+  function closeNav() {
+    navMenu.classList.remove('open');
+    if (navToggle) { navToggle.classList.remove('open'); navToggle.setAttribute('aria-expanded', 'false'); }
+    document.body.style.overflow = '';
+  }
+  const mq = window.matchMedia('(max-width: 640px)');
+  function onMQ(e) { if (navToggle) navToggle.style.display = e.matches ? 'flex' : 'none'; if (!e.matches) closeNav(); }
+  mq.addEventListener('change', onMQ); onMQ(mq);
+  document.addEventListener('click', e => { if (navMenu.classList.contains('open') && !navMenu.contains(e.target) && e.target !== navToggle && !navToggle.contains(e.target)) closeNav(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+</script>
+</body>
+</html>
