@@ -1,206 +1,278 @@
 # Deployment Guide
 
-## Prerequisites
+OilGas Nanobot Swarm supports four deployment targets. Choose based on your needs:
 
-- Linux or WSL2 (Ubuntu 22.04+)
-- NVIDIA GPU with 12+ GB VRAM
-- NVIDIA driver 525+ with CUDA 12.0+
-- Python 3.11 or 3.12
-- Redis 7.0+
-- [uv](https://github.com/astral-sh/uv) package manager (recommended)
+| Target | AI Backend | Redis | Scheduler | Best For |
+|--------|-----------|-------|-----------|----------|
+| **Vercel** | Ollama Cloud + NVIDIA NIM | ❌ | ❌ | Demo, API access |
+| **Render** | Ollama/NIM + optional local | ✅ | ✅ | Production |
+| **Railway** | Ollama/NIM + optional local | ✅ | ✅ | Production |
+| **Docker Compose** | Configurable | ✅ | ✅ | Local development |
 
-## Step 1: Clone and Setup Environment
+---
 
-```bash
-git clone https://github.com/ttracx/nanobot-swarm.git
-cd nanobot-swarm
+## Vercel (Live Demo)
 
-# Create virtual environment
-uv venv ~/vllm-nanobot-env --python 3.12
-source ~/vllm-nanobot-env/bin/activate
+**Current deployment**: `https://oilgas-nanobot-swarm.vibecaas.app`
 
-# Install the package + dependencies
-uv pip install -e .
+### Critical: `vercel.json` Configuration
 
-# Install PyTorch + vLLM (CUDA)
-uv pip install torch vllm
+Vercel must use the `functions` config (not `builds`). This is the only pattern that works reliably with FastAPI:
+
+```json
+{
+  "version": 2,
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/", "destination": "/nanobot/static/index.html" },
+    { "source": "/health", "destination": "/api/index.py" },
+    { "source": "/swarm/:path*", "destination": "/api/index.py" },
+    { "source": "/v1/:path*", "destination": "/api/index.py" },
+    { "source": "/docs", "destination": "/api/index.py" },
+    { "source": "/openapi.json", "destination": "/api/index.py" }
+  ]
+}
 ```
 
-## Step 2: Verify GPU
+**Do NOT use `builds` config** — it causes FUNCTION_INVOCATION_FAILED with FastAPI.
+
+**Do NOT add a `handler` variable** in `api/index.py` — Vercel auto-detects `app`.
+
+### Deploy
 
 ```bash
-# WSL2
-/usr/lib/wsl/lib/nvidia-smi
-
-# Native Linux
-nvidia-smi
-
-# Verify PyTorch sees GPU
-python3 -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+npm i -g vercel
+vercel login
+vercel --prod
 ```
 
-## Step 3: Configure
+### Environment Variables (Vercel Dashboard → Settings → Environment Variables)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OLLAMA_API_KEY` | ✅ | Ollama Cloud API key (primary AI, fast ~3-5s) |
+| `NVIDIA_API_KEY` | Recommended | NVIDIA NIM fallback |
+| `GATEWAY_API_KEY` | Optional | If set, admin endpoints require this key |
+
+### Adding/Updating Env Vars via CLI
 
 ```bash
+# Add (no trailing newline — critical!)
+printf '%s' "your-key-value" | vercel env add OLLAMA_API_KEY production
+
+# Remove and re-add
+vercel env rm OLLAMA_API_KEY production --yes
+printf '%s' "new-key-value" | vercel env add OLLAMA_API_KEY production
+```
+
+> ⚠️ **Always use `printf '%s'`** not `echo` — `echo` adds a newline which breaks auth comparisons.
+
+### Supported Python Versions
+
+Vercel reads the Python version from `pyproject.toml`:
+```toml
+[project]
+requires-python = ">=3.11"
+```
+Vercel will use Python 3.12. The app is compatible with 3.11+.
+
+### Vercel Function Timeout
+
+Default is 10 seconds on Hobby plan. Set `maxDuration: 60` in `vercel.json` to extend (Pro plan required for > 10s).
+
+---
+
+## Render (Full Stack)
+
+The `render.yaml` provisions a web service, Redis, and persistent disk.
+
+### One-Click Deploy
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ttracx/oilgas-nanobot-swarm)
+
+### Manual Deploy
+
+```bash
+# Install Render CLI
+npm i -g @render/cli
+
+# Deploy
+render deploy --config render.yaml
+```
+
+### render.yaml Overview
+
+```yaml
+services:
+  - type: web
+    name: oilgas-nanobot-gateway
+    runtime: docker
+    healthCheckPath: /health
+    envVars:
+      - key: OLLAMA_API_KEY
+        sync: false     # Enter in dashboard
+      - key: GATEWAY_API_KEY
+        generateValue: true
+      - key: REDIS_HOST
+        fromService:
+          name: oilgas-nanobot-redis
+          type: redis
+          property: host
+  - type: redis
+    name: oilgas-nanobot-redis
+    plan: starter
+```
+
+### Environment Variables (Render Dashboard)
+
+Same as Vercel plus Redis (auto-configured from `fromService`).
+
+---
+
+## Railway (Full Stack)
+
+```bash
+npm i -g @railway/cli
+railway login
+railway link
+railway up
+```
+
+### Environment Variables (Railway Dashboard)
+
+| Variable | Value |
+|----------|-------|
+| `OLLAMA_API_KEY` | Your Ollama Cloud key |
+| `NVIDIA_API_KEY` | Your NVIDIA NIM key |
+| `GATEWAY_API_KEY` | Generate a secure random string |
+| `ENABLE_OILGAS_TEAMS` | `true` |
+| `REDIS_HOST` | Auto-set by Railway Redis addon |
+
+Railway auto-detects `railway.toml` and provisions Redis if configured.
+
+---
+
+## Docker Compose (Local)
+
+```bash
+git clone https://github.com/ttracx/oilgas-nanobot-swarm.git
+cd oilgas-nanobot-swarm
+
+# Configure
 cp .env.example .env
+# Edit .env with your API keys
+
+# Start (includes Redis)
+docker compose up -d
+
+# View logs
+docker compose logs -f nanobot
+
+# Stop
+docker compose down
 ```
 
-Edit `.env`:
+### docker-compose.yml Services
 
-```env
-VLLM_URL=http://localhost:8000/v1
-VLLM_API_KEY=your-secure-key
-GATEWAY_API_KEY=your-gateway-key
+| Service | Port | Purpose |
+|---------|------|---------|
+| `nanobot` | 8100 | FastAPI gateway |
+| `redis` | 6379 | State store + session memory |
+
+### Health Check
+
+```bash
+curl http://localhost:8100/health
+```
+
+---
+
+## GitHub Codespaces
+
+[![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ttracx/oilgas-nanobot-swarm?quickstart=1)
+
+The `.devcontainer/devcontainer.json` configures:
+- Python 3.11 + all dependencies auto-installed
+- Redis started automatically
+- Port 8100 forwarded to browser
+- VS Code extensions: Python, Docker, REST Client
+
+**Store API keys as Codespaces Secrets** to avoid entering them each session:
+> GitHub → Settings → Codespaces → New secret
+
+---
+
+## Environment Variables Reference
+
+```bash
+# .env.example
+
+# ── Primary AI (Ollama Cloud) ──────────────────────────────────────────────
+OLLAMA_API_KEY=your-ollama-cloud-api-key
+# Available models: ministral-3:8b, glm-5, kimi-k2:1t, qwen3-coder:480b
+
+# ── Fallback AI (NVIDIA NIM) ──────────────────────────────────────────────
+NVIDIA_API_KEY=nvapi-your-nvidia-key
+# Models: meta/llama-3.3-70b-instruct, moonshotai/kimi-k2-instruct-0905
+
+# ── Optional: Anthropic Claude ────────────────────────────────────────────
+ANTHROPIC_API_KEY=sk-ant-your-key
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
+
+# ── Gateway Auth ──────────────────────────────────────────────────────────
+GATEWAY_API_KEY=generate-a-secure-random-key
+# If unset: all requests are public (demo mode)
+
+# ── Redis ─────────────────────────────────────────────────────────────────
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
-REDIS_PASSWORD=your-redis-password
+REDIS_PASSWORD=
 REDIS_DB=0
+
+# ── Oil & Gas ─────────────────────────────────────────────────────────────
+ENABLE_OILGAS_TEAMS=true
+VAULT_PATH=~/.nellie/vault   # optional: Obsidian knowledge vault
 ```
 
-## Step 4: Launch
+---
 
-### Option A: All-in-one (recommended)
+## Common Issues
+
+### `FUNCTION_INVOCATION_FAILED` on Vercel
+
+**Cause**: Using `builds` config instead of `functions` config in `vercel.json`.
+
+**Fix**: Use exactly this vercel.json pattern:
+```json
+{"version":2,"functions":{"api/index.py":{"maxDuration":60}},"rewrites":[...]}
+```
+
+### Auth failures with environment variables
+
+**Cause**: `echo` adds a trailing newline to the key value.
+
+**Fix**: Use `printf '%s' "value"` when setting env vars via CLI.
+
+### Function timeout on Vercel Hobby plan
+
+**Cause**: Hobby plan caps at 10 seconds regardless of `maxDuration`.
+
+**Fix**: Upgrade to Vercel Pro, or use a faster model (`ministral-3:8b` responds in ~3-5s).
+
+### Redis connection refused (local)
 
 ```bash
-bash scripts/start_all.sh
+docker run -d -p 6379:6379 redis:7.4-alpine
 ```
 
-This launches Redis, vLLM (waits for model to load), then the Gateway.
+---
 
-### Option B: Individual components
+## Pro Edition
 
-**Terminal 1 — Redis:**
-```bash
-bash scripts/launch_redis.sh
-```
-
-**Terminal 2 — vLLM:**
-```bash
-bash scripts/launch_vllm.sh
-```
-
-Wait for `INFO: Application startup complete` in the vLLM log.
-
-**Terminal 3 — Gateway:**
-```bash
-bash scripts/launch_gateway.sh
-```
-
-## Step 5: Verify
-
-```bash
-# Health check
-curl http://localhost:8100/health
-
-# Topology
-curl -H "x-api-key: nq-gateway-key" http://localhost:8100/swarm/topology
-
-# Test run
-curl -X POST http://localhost:8100/swarm/run \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: nq-gateway-key" \
-  -d '{"goal": "Explain the difference between REST and GraphQL in 3 paragraphs"}'
-```
-
-## vLLM Configuration
-
-The launch script is optimized for RTX 4060 Ti 16GB. Adjust for other GPUs:
-
-| Parameter | RTX 4060 Ti 16GB | RTX 3090 24GB | A100 40GB |
-|-----------|------------------|---------------|-----------|
-| `--dtype` | bfloat16 | bfloat16 | bfloat16 |
-| `--gpu-memory-utilization` | 0.85 | 0.90 | 0.90 |
-| `--max-model-len` | 8192 | 16384 | 32768 |
-| `--max-num-seqs` | 32 | 64 | 128 |
-| `--max-num-batched-tokens` | 16384 | 32768 | 65536 |
-
-Edit `scripts/launch_vllm.sh` to change these.
-
-## Redis Configuration
-
-The Redis config at `/etc/redis/redis-nanobot.conf` reserves up to 32GB RAM for state. Key settings:
-
-- `maxmemory 32gb` — Adjust based on available RAM
-- `appendonly yes` — AOF persistence for crash recovery
-- `maxmemory-policy allkeys-lru` — Evict old data under memory pressure
-
-## Systemd Service (Production)
-
-Create `/etc/systemd/system/nanobot-vllm.service`:
-
-```ini
-[Unit]
-Description=NeuralQuantum vLLM Nanobot Server
-After=network.target redis.service
-
-[Service]
-Type=simple
-User=ttracx
-WorkingDirectory=/home/ttracx/nanobot-swarm
-ExecStart=/bin/bash /home/ttracx/nanobot-swarm/scripts/launch_vllm.sh
-Restart=always
-RestartSec=10
-Environment=CUDA_VISIBLE_DEVICES=0
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Create `/etc/systemd/system/nanobot-gateway.service`:
-
-```ini
-[Unit]
-Description=NeuralQuantum Nanobot Gateway
-After=network.target nanobot-vllm.service redis.service
-
-[Service]
-Type=simple
-User=ttracx
-WorkingDirectory=/home/ttracx/nanobot-swarm
-ExecStart=/bin/bash /home/ttracx/nanobot-swarm/scripts/launch_gateway.sh
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable nanobot-vllm nanobot-gateway
-sudo systemctl start nanobot-vllm nanobot-gateway
-```
-
-## Monitoring
-
-### Logs
-
-```bash
-tail -f ~/vllm_server.log        # vLLM inference
-tail -f ~/nanobot_gateway.log    # Gateway API
-sudo tail -f /var/log/redis/nanobot-redis.log  # Redis
-```
-
-### Health endpoints
-
-```bash
-# System health
-curl http://localhost:8100/health
-
-# Swarm health (agents, sessions, Redis memory)
-curl -H "x-api-key: nq-gateway-key" http://localhost:8100/swarm/health
-
-# Active agents
-curl -H "x-api-key: nq-gateway-key" http://localhost:8100/agents
-```
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| vLLM OOM | Reduce `--gpu-memory-utilization` or `--max-model-len` |
-| Slow first request | Model loads on first request; wait ~60-90s |
-| Redis connection refused | Run `bash scripts/launch_redis.sh` |
-| Tool calls not working | Model may not support function calling natively; the router falls back to text mode |
-| WSL2 CUDA not found | Ensure `nvidia-smi` works at `/usr/lib/wsl/lib/nvidia-smi` |
+> **⭐ Pro Edition** includes: dedicated Redis, full hierarchical swarm, knowledge vault, background scheduler, MS 365 integration, multi-tenant support, priority support.
+>
+> Contact: [info@neuralquantum.ai](mailto:info@neuralquantum.ai)

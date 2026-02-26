@@ -671,7 +671,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
       </div>
       <div>
-        <div class="status-text-label">Claude Backend</div>
+        <div class="status-text-label">AI Engine</div>
         <div style="display:flex;align-items:center;gap:6px">
           <div class="status-dot dot-gray" id="dot-claude" aria-hidden="true"></div>
           <div class="status-text-value" id="stat-claude">—</div>
@@ -928,10 +928,10 @@
     setTimeout(() => document.getElementById('goal-input').focus(), 400);
   }
 
-  /* ── Run swarm ────────────────────────────────────────────────────────── */
+  /* ── Run swarm — public demo, no API key needed ──────────────────────── */
   async function runSwarm() {
     const goal = document.getElementById('goal-input').value.trim();
-    if (!goal) { log('Warning: Please enter a goal.', 'c-warn'); return; }
+    if (!goal) { log('Enter an engineering goal above.', 'c-warn'); return; }
 
     const btn = document.getElementById('run-btn');
     btn.disabled = true;
@@ -939,9 +939,9 @@
     clearOutput();
 
     const preview = goal.length > 90 ? goal.slice(0, 90) + '...' : goal;
-    log('nanobot-swarm$ ', 'c-prompt');
-    log('Dispatching to hierarchical swarm...', 'c-info');
-    log('Goal: ' + preview, 'c-dim');
+    log('OilGas Nanobot Swarm', 'c-prompt');
+    log('Analyzing engineering task...', 'c-info');
+    log('> ' + preview, 'c-dim');
     log('');
 
     try {
@@ -951,27 +951,22 @@
         body: JSON.stringify({ goal, mode: 'hierarchical' }),
       });
 
-      if (resp.status === 401) {
-        log('Authentication required.', 'c-warn');
-        log('Use /docs (Swagger UI) to authenticate and run requests.', 'c-dim');
-        return;
-      }
       if (!resp.ok) {
         const errText = await resp.text();
-        log('Error ' + resp.status + ': ' + errText.slice(0, 200), 'c-err');
+        log('Error ' + resp.status + ' — please try again in a moment.', 'c-err');
         return;
       }
 
       const data = await resp.json();
-      log('Session:  ' + data.session_id, 'c-ok');
-      log('Tasks:    ' + data.subtask_count, 'c-ok');
+      const dur = data.duration_seconds ? ' (' + data.duration_seconds + 's)' : '';
+      log('Analysis complete' + dur, 'c-ok');
+      log('Powered by NeuralQuantum.ai', 'c-dim');
       log('');
-      log('-- RESULT ------------------------------------------------');
+      log('─'.repeat(50));
       log(data.final_answer || '(no answer returned)', 'c-ok');
 
     } catch (e) {
-      log('Network error: ' + e.message, 'c-err');
-      log('Ensure the gateway is running on port 8100.', 'c-dim');
+      log('Connection error: ' + e.message, 'c-err');
     } finally {
       btn.disabled = false;
       btn.textContent = '\u25B6 Run';
@@ -990,9 +985,10 @@
     try {
       const r = await fetch('/health');
       const d = await r.json();
-      setStatus('dot-gateway', 'stat-gateway', 'dot-green', 'Online');
-      setStatus('dot-claude',  'stat-claude',  d.claude_runner ? 'dot-green' : 'dot-yellow', d.claude_runner ? 'Connected' : 'Not configured');
-      setStatus('dot-redis',   'stat-redis',   'dot-green', 'Connected');
+      const isOk = d.status === 'ok';
+      setStatus('dot-gateway', 'stat-gateway', isOk ? 'dot-green' : 'dot-yellow', isOk ? 'Online' : 'Degraded');
+      setStatus('dot-claude',  'stat-claude',  isOk ? 'dot-green' : 'dot-yellow', isOk ? 'Ready' : 'Unavailable');
+      setStatus('dot-redis',   'stat-redis',   'dot-green', 'Active');
     } catch (_) {
       setStatus('dot-gateway', 'stat-gateway', 'dot-red', 'Offline');
       setStatus('dot-claude',  'stat-claude',  'dot-gray', '—');
@@ -1001,7 +997,7 @@
   }
 
   /* ── Init ─────────────────────────────────────────────────────────────── */
-  log('NeuralQuantum.ai OilGas Nanobot Swarm v2.0', 'c-prompt');
+  log('OilGas Nanobot Swarm — powered by NeuralQuantum.ai', 'c-prompt');
   log('Click a team card above or type your own engineering goal.', 'c-dim');
 
   checkHealth();

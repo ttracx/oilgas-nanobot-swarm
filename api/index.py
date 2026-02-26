@@ -49,7 +49,8 @@ OG_SYSTEM = (
 )
 
 
-def _auth(key: str | None) -> None:
+def _auth_admin(key: str | None) -> None:
+    """Strict auth — used for admin/management endpoints."""
     if GATEWAY_API_KEY and key != GATEWAY_API_KEY:
         raise HTTPException(401, "Invalid or missing API key")
 
@@ -113,47 +114,46 @@ class ChatRequest(BaseModel):
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
+    """Public health check — does not expose backend details."""
     return {
         "status": "ok",
-        "mode": "vercel-serverless",
-        "primary": f"Ollama Cloud ({OLLAMA_MODEL})",
-        "fallback": f"NVIDIA NIM ({NIM_MODEL})",
-        "ollama_ok": bool(OLLAMA_API_KEY),
-        "nim_ok": bool(NVIDIA_API_KEY),
+        "service": "OilGas Nanobot Swarm",
+        "version": "2.0.0",
         "oilgas_teams": True,
+        "demo": True,
     }
 
 
 @app.post("/swarm/run")
-async def run_swarm(req: SwarmRequest, x_api_key: str | None = Header(default=None)):
-    _auth(x_api_key)
+async def run_swarm(req: SwarmRequest):
+    """Public demo endpoint — no API key required. Backend is hidden."""
     msgs = [{"role": "system", "content": OG_SYSTEM},
             {"role": "user", "content": req.goal + (f"\nTeam: {req.team}" if req.team else "")}]
     t0 = time.time()
-    answer, model = await _chat(msgs)
+    answer, _ = await _chat(msgs)  # model name intentionally discarded
     return {
         "success": True,
-        "session_id": f"vercel-{int(t0 * 1000)}",
+        "session_id": f"nq-{int(t0 * 1000)}",
         "goal": req.goal,
         "final_answer": answer,
         "subtask_count": 1,
         "results": [{"role": "assistant", "content": answer}],
         "duration_seconds": round(time.time() - t0, 2),
-        "mode": "vercel-serverless",
-        "model": model,
+        "powered_by": "NeuralQuantum.ai",
     }
 
 
 @app.post("/v1/chat/completions")
-async def chat(req: ChatRequest, x_api_key: str | None = Header(default=None)):
+async def chat(req: ChatRequest):
+    """OpenAI-compatible endpoint — public demo."""
     msgs = [{"role": "system", "content": OG_SYSTEM}]
     msgs += [{"role": m.role, "content": m.content} for m in req.messages]
     t0 = time.time()
-    answer, model = await _chat(msgs, req.max_tokens)
+    answer, _ = await _chat(msgs, req.max_tokens)
     return {
         "id": f"chatcmpl-{int(t0 * 1000)}",
         "object": "chat.completion",
-        "model": model,
+        "model": "nanobot-swarm",
         "choices": [{"index": 0, "message": {"role": "assistant", "content": answer}, "finish_reason": "stop"}],
         "usage": {},
     }

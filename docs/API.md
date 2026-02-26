@@ -1,312 +1,214 @@
 # API Reference
 
-Base URL: `http://localhost:8100`
+**Base URL**: `https://oilgas-nanobot-swarm.vibecaas.app`
+**Swagger UI**: `https://oilgas-nanobot-swarm.vibecaas.app/docs`
 
-## Authentication
-
-Most endpoints require an API key passed as a header:
-```
-x-api-key: <GATEWAY_API_KEY>
-```
-
-OpenAI-compatible endpoints (`/v1/*`) do not require the API key header.
+All endpoints return JSON. The `/swarm/run` and `/v1/chat/completions` endpoints are **public** — no API key required for demo use.
 
 ---
 
-## Swarm Endpoints
+## Endpoints
 
-### POST /swarm/run
+### `GET /health`
 
-Run the nanobot swarm on a goal.
+Public health check.
+
+```bash
+curl https://oilgas-nanobot-swarm.vibecaas.app/health
+```
+
+```json
+{
+  "status": "ok",
+  "service": "OilGas Nanobot Swarm",
+  "version": "2.0.0",
+  "oilgas_teams": true,
+  "demo": true
+}
+```
+
+---
+
+### `POST /swarm/run`
+
+Dispatch an engineering task. **No API key required.**
 
 **Request:**
 ```json
 {
-  "goal": "Design a microservices architecture for an e-commerce platform",
+  "goal": "Calculate ECD at 10,000 ft TVD with 10.5 ppg mud and 320 psi annular pressure loss",
   "mode": "hierarchical",
-  "metadata": {}
+  "team": "well-engineering-review"
 }
 ```
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| goal | string | required | The task to accomplish (1-10000 chars) |
-| mode | string | "hierarchical" | "hierarchical" (3-tier) or "flat" (simple) |
-| metadata | object | {} | Arbitrary metadata passed to session |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `goal` | string | ✅ | Engineering question or task (max 10,000 chars) |
+| `mode` | string | — | `"hierarchical"` (default) or `"flat"` |
+| `team` | string | — | Named team from [AGENT_TEAMS.md](AGENT_TEAMS.md) |
 
 **Response:**
 ```json
 {
   "success": true,
-  "session_id": "abc123-...",
-  "goal": "Design a microservices architecture...",
-  "plan_summary": "Break into research, architecture design, and code scaffolding",
-  "final_answer": "## Architecture Design\n...",
-  "subtask_count": 4,
-  "results": [
-    {
-      "task_id": "t1",
-      "l1_role": "researcher",
-      "instruction": "Research microservices patterns...",
-      "output": "...",
-      "success": true
-    }
-  ],
-  "session_summary": {
-    "session_id": "abc123-...",
-    "total_tasks": 12,
-    "successful": 11,
-    "failed": 1,
-    "success_rate": 91.7,
-    "total_tokens": 15420,
-    "avg_duration_seconds": 4.2,
-    "roles_used": ["orchestrator", "researcher", "coder", "analyst"]
-  }
+  "session_id": "nq-1772088336060",
+  "goal": "...",
+  "final_answer": "ECD Calculation:\n\nECD = MW + APL / (0.052 × TVD)\n= 10.5 + 320 / (0.052 × 10000)\n= 10.5 + 0.615\n= 11.115 ppg\n\n✅ SAFE — ECD (11.115 ppg) < Fracture Gradient (14.2 ppg)\n\n⚠️ Verify all calculations with a licensed petroleum engineer.",
+  "subtask_count": 1,
+  "duration_seconds": 7.6,
+  "powered_by": "NeuralQuantum.ai"
 }
+```
+
+**Examples:**
+
+```bash
+# ECD calculation
+curl -X POST https://oilgas-nanobot-swarm.vibecaas.app/swarm/run \
+  -H "Content-Type: application/json" \
+  -d '{"goal": "Calculate ECD at 10,000 ft TVD with 10.5 ppg mud and 320 psi APL"}'
+
+# Named team
+curl -X POST https://oilgas-nanobot-swarm.vibecaas.app/swarm/run \
+  -H "Content-Type: application/json" \
+  -d '{"goal": "Daily field briefing: 8200 BOPD, 14.5 MMSCFD, 22000 BWPD", "team": "oilgas-field-briefing"}'
+
+# Well control
+curl -X POST https://oilgas-nanobot-swarm.vibecaas.app/swarm/run \
+  -H "Content-Type: application/json" \
+  -d '{"goal": "Calculate kill mud weight. SIDPP=380 psi, MW=10.5 ppg, TVD=9800 ft"}'
 ```
 
 ---
 
-### GET /health
+### `POST /v1/chat/completions`
 
-Basic health check.
+OpenAI-compatible endpoint. Works with any OpenAI SDK client.
 
-**Response:**
-```json
-{
-  "status": "ok",
-  "hierarchical_swarm": true,
-  "flat_swarm": true
-}
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://oilgas-nanobot-swarm.vibecaas.app/v1",
+    api_key="demo",  # any value works
+)
+
+response = client.chat.completions.create(
+    model="nanobot-swarm",
+    messages=[
+        {"role": "user", "content": "Explain Vogel's IPR equation and when to use it"}
+    ],
+)
+print(response.choices[0].message.content)
+```
+
+**Streaming:**
+```python
+stream = client.chat.completions.create(
+    model="nanobot-swarm",
+    messages=[{"role": "user", "content": "Design a frac program for Wolfcamp A"}],
+    stream=True,
+)
+for chunk in stream:
+    print(chunk.choices[0].delta.content or "", end="")
 ```
 
 ---
 
-### GET /swarm/health
+### `GET /v1/models`
 
-Detailed swarm health with Redis metrics.
+List available models.
 
-**Response:**
-```json
-{
-  "timestamp": 1740000000.0,
-  "active_agents": 5,
-  "agent_breakdown": {"coder": 2, "researcher": 1, "analyst": 2},
-  "recent_sessions": 3,
-  "failed_queue_depth": 0,
-  "redis_memory_used_mb": 12.4,
-  "redis_memory_peak_mb": 45.1,
-  "agents": [...]
-}
-```
-
----
-
-### GET /swarm/topology
-
-Return the full swarm role hierarchy.
-
-**Response:**
-```json
-{
-  "tiers": 3,
-  "l0": "queen",
-  "l1_roles": ["coder", "researcher", "analyst", "validator", "executor", "architect"],
-  "topology": {
-    "coder": {
-      "stages": 3,
-      "pipeline": [["code_planner"], ["code_writer"], ["code_tester", "code_reviewer"]]
-    },
-    "researcher": {
-      "stages": 2,
-      "pipeline": [["web_searcher"], ["synthesizer", "fact_verifier"]]
-    }
-  }
-}
-```
-
----
-
-### GET /sessions
-
-List recent swarm sessions.
-
-**Response:**
-```json
-{
-  "sessions": [
-    {
-      "session_id": "...",
-      "goal": "...",
-      "status": "complete",
-      "success": true,
-      "created_at": 1740000000.0,
-      "completed_at": 1740000045.0
-    }
-  ]
-}
-```
-
----
-
-### GET /sessions/{session_id}
-
-Get session detail with all tasks.
-
-**Response:**
-```json
-{
-  "session": { "session_id": "...", "goal": "...", "status": "complete", ... },
-  "tasks": [
-    {
-      "task_id": "...",
-      "agent_id": "...",
-      "agent_role": "coder",
-      "content_preview": "Write a REST API...",
-      "status": "complete",
-      "success": true,
-      "output_preview": "```python\nfrom fastapi...",
-      "tokens_used": 1200,
-      "duration_seconds": 5.3,
-      "tool_calls": ["run_python"]
-    }
-  ],
-  "summary": { ... }
-}
-```
-
----
-
-### GET /agents
-
-List all active registered agents.
-
-**Response:**
-```json
-{
-  "agents": [
-    {
-      "agent_id": "...",
-      "role": "coder",
-      "name": "coder-lead-a1b2c3",
-      "session_id": "...",
-      "status": "executing",
-      "tasks_completed": 3,
-      "tokens_used": 4500
-    }
-  ]
-}
-```
-
----
-
-## OpenAI-Compatible Endpoints
-
-### GET /v1/models
-
-List available swarm models.
-
-**Response:**
 ```json
 {
   "object": "list",
   "data": [
-    {"id": "nanobot-swarm-hierarchical", "object": "model", "owned_by": "neuralquantum"},
-    {"id": "nanobot-swarm-flat", "object": "model", "owned_by": "neuralquantum"},
-    {"id": "nanobot-reasoner", "object": "model", "owned_by": "neuralquantum"}
+    {"id": "ministral-3:8b", "object": "model", "owned_by": "ollama"},
+    {"id": "meta/llama-3.3-70b-instruct", "object": "model", "owned_by": "nvidia"},
+    {"id": "nanobot-swarm", "object": "model", "owned_by": "neuralquantum"}
   ]
 }
 ```
 
 ---
 
-### POST /v1/chat/completions
+### `GET /swarm/topology`
 
-OpenAI-compatible chat completions. Use any OpenAI client library.
+Agent hierarchy overview.
 
-**Request:**
 ```json
 {
-  "model": "nanobot-swarm-hierarchical",
-  "messages": [
-    {"role": "system", "content": "Context for the swarm"},
-    {"role": "user", "content": "Build a Python CLI for managing tasks"}
-  ],
-  "temperature": 0.1,
-  "max_tokens": 4096,
-  "stream": false,
-  "metadata": {}
+  "tiers": 3,
+  "l0": "queen",
+  "l1_roles": ["coder", "researcher", "analyst", "validator", "executor", "architect"]
 }
 ```
 
-| Model | Description |
-|-------|-------------|
-| `nanobot-swarm-hierarchical` | Full 3-tier swarm (Queen→L1→L2) |
-| `nanobot-swarm-flat` | Simple flat orchestrator |
-| `nanobot-swarm` | Alias for hierarchical |
+### `GET /docs`
 
-**Response:**
-Standard OpenAI chat completion format with execution metadata appended.
+Interactive Swagger UI — test all endpoints in the browser.
 
 ---
 
-## Nellie Management Endpoints
+## SDK Examples
 
-### POST /v1/nellie/dispatch
+### Python (requests)
+```python
+import requests
 
-Direct task dispatch to a specific team.
-
-**Request:**
-```json
-{
-  "task": "Write comprehensive tests for the auth module",
-  "team": "coder",
-  "priority": 2,
-  "context": {"module_path": "src/auth.py"},
-  "callback_url": null
-}
+r = requests.post(
+    "https://oilgas-nanobot-swarm.vibecaas.app/swarm/run",
+    json={"goal": "What is the fracture gradient at 12,000 ft with overburden 1.0 psi/ft and Poisson's ratio 0.25?"},
+)
+print(r.json()["final_answer"])
 ```
 
-| team | Description |
-|------|-------------|
-| `auto` | Full hierarchical swarm (Queen decides) |
-| `coder` | Code team (Planner→Writer→Tester→Reviewer) |
-| `researcher` | Research team (Searcher→Synthesizer→Verifier) |
-| `analyst` | Analysis team (Reasoner→Critiquer→Summarizer) |
-| `validator` | Validation team (Correctness+Completeness→Scorer) |
-| `executor` | Execution team (Planner→Runner) |
+### JavaScript
+```javascript
+const res = await fetch("https://oilgas-nanobot-swarm.vibecaas.app/swarm/run", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    goal: "Calculate Archie water saturation: Rt=12.5 ohm-m, Rw=0.04, phi=0.22",
+  }),
+});
+const data = await res.json();
+console.log(data.final_answer);
+```
 
-**Response:**
-```json
-{
-  "session_id": "...",
-  "status": "complete",
-  "result": "## Test Suite\n...",
-  "team_used": "coder",
-  "tasks_completed": 4,
-  "tokens_used": 8500
+### TypeScript
+```typescript
+interface SwarmResponse {
+  success: boolean;
+  session_id: string;
+  final_answer: string;
+  duration_seconds: number;
+  powered_by: string;
 }
+
+const response = await fetch("https://oilgas-nanobot-swarm.vibecaas.app/swarm/run", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ goal: "Design an artificial lift program for a 65% WC well at 2800 psi reservoir pressure" }),
+});
+const data: SwarmResponse = await response.json();
 ```
 
 ---
 
-### GET /v1/nellie/sessions
+## Error Codes
 
-Nellie's session history overview.
+| Status | Error | Meaning |
+|--------|-------|---------|
+| `503` | Service unavailable | No AI backend configured |
+| `502` | Bad gateway | AI backend call failed — retry |
+| `504` | Gateway timeout | Query too complex, try shorter goal |
+| `422` | Validation error | Invalid request body |
 
 ---
 
-### GET /v1/nellie/health
+## Rate Limits
 
-Swarm health from Nellie's perspective.
-
-**Response:**
-```json
-{
-  "swarm_status": "operational",
-  "active_nanobots": 0,
-  "role_distribution": {},
-  "failed_queue": 0,
-  "redis_memory_mb": 1.2
-}
-```
+- **Demo (Vercel)**: Subject to Vercel function invocation limits and Ollama/NVIDIA NIM rate limits
+- **Pro Edition**: Dedicated capacity — contact [info@neuralquantum.ai](mailto:info@neuralquantum.ai)

@@ -6,15 +6,16 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Anthropic Claude](https://img.shields.io/badge/Claude-Sonnet%204.5-blueviolet?logo=anthropic&logoColor=white)](https://anthropic.com)
+[![Ollama Cloud](https://img.shields.io/badge/Ollama-Cloud-000000?logo=ollama&logoColor=white)](https://ollama.com)
+[![NVIDIA NIM](https://img.shields.io/badge/NVIDIA-NIM-76b900?logo=nvidia&logoColor=white)](https://build.nvidia.com)
 [![Redis](https://img.shields.io/badge/Redis-7.4-DC382D?logo=redis&logoColor=white)](https://redis.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Deploy with Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com/new/clone?repository-url=https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm)
-[![Open in GitHub Codespaces](https://img.shields.io/badge/Open-Codespaces-181717?logo=github&logoColor=white)](https://codespaces.new/NeuralQuantumAI/oilgas-nanobot-swarm)
+[![Deploy with Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com/new/clone?repository-url=https://github.com/ttracx/oilgas-nanobot-swarm)
+[![Open in GitHub Codespaces](https://img.shields.io/badge/Open-Codespaces-181717?logo=github&logoColor=white)](https://codespaces.new/ttracx/oilgas-nanobot-swarm)
 
 *Autonomous multi-agent engineering intelligence for upstream, midstream, and downstream operations*
 
-[**Quick Start**](#-quick-start) · [**Architecture**](#-architecture) · [**Agent Teams**](#-oil--gas-agent-teams) · [**Tools**](#-engineering-tools) · [**Deploy**](#-deployment) · [**API**](#-api-reference)
+**[Live Demo](https://oilgas-nanobot-swarm.vibecaas.app)** · [Quick Start](#-quick-start) · [Architecture](#-architecture) · [Agent Teams](#-oil--gas-agent-teams) · [Tools](#-engineering-tools) · [Deploy](#-deployment) · [API](#-api-reference) · [Docs](docs/)
 
 </div>
 
@@ -22,29 +23,28 @@
 
 ## Overview
 
-**OilGas Nanobot Swarm** is an open-source, production-ready hierarchical multi-agent system purpose-built for oil and gas engineering workflows. It combines NeuralQuantum's 3-tier swarm orchestration with domain-specific engineering tools, regulatory references, and AI-powered analysis — all accessible via an OpenAI-compatible REST API.
+**OilGas Nanobot Swarm** is an open-source, production-ready hierarchical multi-agent AI system purpose-built for oil and gas engineering. It runs on [Vercel](https://oilgas-nanobot-swarm.vibecaas.app) using Ollama Cloud and NVIDIA NIM as AI backends — no GPU required, no local model downloads.
+
+### Live Deployment
+
+| URL | Status |
+|-----|--------|
+| [oilgas-nanobot-swarm.vibecaas.app](https://oilgas-nanobot-swarm.vibecaas.app) | Dashboard |
+| [oilgas-nanobot-swarm.vibecaas.app/health](https://oilgas-nanobot-swarm.vibecaas.app/health) | Health check |
+| [oilgas-nanobot-swarm.vibecaas.app/docs](https://oilgas-nanobot-swarm.vibecaas.app/docs) | Swagger UI |
 
 ### What It Does
 
 | Domain | Capabilities |
 |--------|-------------|
 | **Drilling** | ECD, kick tolerance, MAASP, well control kill sheets, casing design |
-| **Reservoir** | IPR curves, Vogel, Darcy flow, formation evaluation, water saturation (Archie) |
-| **Production** | Productivity index, decline curves, artificial lift selection, nodal analysis |
-| **Pipeline** | Pressure drop (Darcy-Weisbach), flow regime, line sizing, erosional velocity |
-| **Petrophysics** | Sonic porosity (Wyllie), shale volume (GR), Archie Sw, net pay cutoffs |
+| **Reservoir** | IPR/Vogel curves, Darcy flow, formation evaluation, water saturation (Archie) |
+| **Production** | Productivity index, decline curves, artificial lift selection |
+| **Pipeline** | Pressure drop (Darcy-Weisbach), flow regime, line sizing |
+| **Petrophysics** | Sonic porosity (Wyllie), shale volume (GR), Archie Sw, net pay |
 | **Well Control** | Kill mud weight, MAASP, driller's method kill schedule |
 | **HSE & Regulatory** | API standards, BSEE/BOEM, OSHA PSM (14 elements), EPA emissions |
 | **Economics** | AFE preparation, NPV/IRR, break-even price, EUR sensitivity |
-
-### Who It's For
-
-- **Reservoir Engineers** — automated IPR analysis, material balance, decline curves
-- **Drilling Engineers** — well planning reviews, ECD/kick tolerance verification
-- **Production Engineers** — surveillance, optimization recommendations
-- **HSE Professionals** — PSM compliance audits, HAZOP support
-- **Operations Teams** — daily field briefings, digital morning reports
-- **Technical Managers** — economic screening, capital allocation analysis
 
 ---
 
@@ -61,25 +61,27 @@
                     │  Decomposes goals into L1 tasks  │
                     └──┬──────┬──────┬──────┬─────────┘
                        │      │      │      │
-           ┌───────────▼┐ ┌───▼──┐ ┌▼────┐ ┌▼───────────┐
-           │   Coder    │ │Rsrch │ │Anlst│ │  Executor  │  (L1 Leads)
-           │  L1 Agent  │ │ L1   │ │ L1  │ │   L1 Agent │
-           └──────┬─────┘ └──┬───┘ └──┬──┘ └─────┬──────┘
+           ┌───────────▼┐ ┌───▼──┐ ┌▼────┐ ┌▼──────────┐
+           │   Coder    │ │Rsrch │ │Anlst│ │ Executor  │  (L1)
+           └──────┬─────┘ └──┬───┘ └──┬──┘ └─────┬─────┘
                   │          │         │           │
-          ┌───────▼──────────▼─────────▼───────────▼───────┐
-          │              L2 Sub-Agents (15 roles)           │
-          │  Code Planner · Writer · Tester · Reviewer      │
-          │  Web Searcher · Synthesizer · Fact Verifier     │
-          │  Reasoner · Critiquer · Summarizer · Scorer     │
-          └─────────────────────┬───────────────────────────┘
+          ┌───────▼──────────▼─────────▼───────────▼──────┐
+          │            L2 Sub-Agents (15 roles)            │
+          └─────────────────────┬──────────────────────────┘
                                 │
-          ┌─────────────────────▼───────────────────────────┐
-          │              Engineering Tool Layer              │
-          │  reservoir_pressure_calc · drilling_eng_calc    │
-          │  production_eng_calc     · pipeline_hydraulics  │
+          ┌─────────────────────▼──────────────────────────┐
+          │              Engineering Tool Layer             │
+          │  reservoir_pressure_calc · drilling_eng_calc   │
+          │  production_eng_calc     · pipeline_hydraulics │
           │  well_control_calc       · formation_eval_calc  │
-          │  oilgas_regulatory_ref   · web_search           │
-          └─────────────────────────────────────────────────┘
+          │  oilgas_regulatory_ref   · web_search          │
+          └────────────────────────────────────────────────┘
+                                │
+          ┌─────────────────────▼──────────────────────────┐
+          │               AI Backend Layer                  │
+          │  Primary:  Ollama Cloud (ministral-3:8b)        │
+          │  Fallback: NVIDIA NIM (llama-3.3-70b-instruct)  │
+          └────────────────────────────────────────────────┘
 ```
 
 ### Tier Structure
@@ -90,58 +92,70 @@
 | **L1** | Domain Leads | 6 | Coder, Researcher, Analyst, Validator, Executor, Architect |
 | **L2** | Sub-Agents | 15 | Narrow specialists (planner, writer, tester, searcher, etc.) |
 
+### Technology Stack
+
+| Component | Technology |
+|-----------|------------|
+| API Framework | FastAPI 0.115 |
+| Primary AI | Ollama Cloud (`ministral-3:8b`, ~3-5s) |
+| Fallback AI | NVIDIA NIM (`meta/llama-3.3-70b-instruct`) |
+| State Store | Redis 7.4 (full-stack deployments) |
+| Serialization | Pydantic v2 |
+| HTTP Client | httpx 0.28 |
+
 ---
 
 ## Quick Start
 
-### Option 1 — GitHub Codespaces (Zero Setup)
+### Option 1 — Vercel (Zero Setup, Live Now)
 
-Launch a fully-configured cloud dev environment instantly:
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/NeuralQuantumAI/oilgas-nanobot-swarm?quickstart=1)
+The app is already deployed. Grab the API key and start querying:
 
 ```bash
-# Inside the Codespace:
-export ANTHROPIC_API_KEY=sk-ant-your-key
-python -m uvicorn nanobot.api.gateway:app --reload --port 8100
-# → Open http://localhost:8100/docs
+# Health check
+curl https://oilgas-nanobot-swarm.vibecaas.app/health
+
+# Engineering query (requires x-api-key header)
+curl -X POST https://oilgas-nanobot-swarm.vibecaas.app/swarm/run \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_GATEWAY_KEY" \
+  -d '{"goal": "Calculate ECD at 10,000 ft TVD with 10.5 ppg mud and 320 psi APL"}'
 ```
 
----
+### Option 2 — GitHub Codespaces
 
-### Option 2 — Local Development
-
-**Prerequisites**: Python 3.11+, Redis 7+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ttracx/oilgas-nanobot-swarm?quickstart=1)
 
 ```bash
-# 1. Clone
-git clone https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm.git
+# Inside Codespace — set env vars and start
+export OLLAMA_API_KEY=your-ollama-key
+export GATEWAY_API_KEY=your-gateway-key
+python -m uvicorn nanobot.api.gateway:app --reload --port 8100
+```
+
+### Option 3 — Local Docker Compose
+
+```bash
+git clone https://github.com/ttracx/oilgas-nanobot-swarm.git
 cd oilgas-nanobot-swarm
 
-# 2. Install
-pip install -e ".[dev]"
-
-# 3. Configure
+# Configure
 cp .env.example .env
-# Edit .env — add ANTHROPIC_API_KEY at minimum
+# Edit .env — add OLLAMA_API_KEY and GATEWAY_API_KEY
 
-# 4. Start Redis
-docker run -d -p 6379:6379 redis:7.4-alpine
-
-# 5. Launch
-python -m uvicorn nanobot.api.gateway:app --reload --port 8100
+# Start (includes Redis)
+docker compose up -d
 ```
 
----
-
-### Option 3 — Docker Compose
+### Option 4 — Local Python
 
 ```bash
-git clone https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm.git
+git clone https://github.com/ttracx/oilgas-nanobot-swarm.git
 cd oilgas-nanobot-swarm
-echo "ANTHROPIC_API_KEY=sk-ant-your-key" > .env
-docker compose up -d
-docker compose logs -f nanobot
+pip install -e ".[dev]"
+cp .env.example .env   # configure OLLAMA_API_KEY
+docker run -d -p 6379:6379 redis:7.4-alpine
+python -m uvicorn nanobot.api.gateway:app --reload --port 8100
 ```
 
 ---
@@ -151,30 +165,34 @@ docker compose logs -f nanobot
 ```bash
 # .env — copy from .env.example
 
-# AI Backend (choose one or both)
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+# ── Primary AI Backend ─────────────────────────────────────────────────────────
+# Ollama Cloud (recommended — fast, cost-effective)
+OLLAMA_API_KEY=your-ollama-key
+# Models available: ministral-3:8b, glm-5, kimi-k2:1t, qwen3-coder:480b, etc.
+
+# ── Fallback AI Backend ────────────────────────────────────────────────────────
+# NVIDIA NIM (high quality, robust fallback)
+NVIDIA_API_KEY=nvapi-your-key
+# Models: meta/llama-3.3-70b-instruct, moonshotai/kimi-k2-instruct-0905
+
+# ── Optional: Anthropic Claude ────────────────────────────────────────────────
+ANTHROPIC_API_KEY=sk-ant-your-key
 ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
-# Optional: local vLLM inference
-VLLM_URL=http://localhost:8000/v1
-VLLM_API_KEY=your-vllm-api-key
-
-# Gateway auth
+# ── Gateway ────────────────────────────────────────────────────────────────────
 GATEWAY_API_KEY=your-secure-api-key
 
-# Redis
+# ── Redis State Store ──────────────────────────────────────────────────────────
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 
-# Oil & Gas features
+# ── Oil & Gas Features ─────────────────────────────────────────────────────────
 ENABLE_OILGAS_TEAMS=true
 ```
 
 ---
 
 ## Oil & Gas Agent Teams
-
-Pre-configured swarm teams for engineering workflows. Dispatch via API or scheduler.
 
 | Team | Mode | Use Case |
 |------|------|----------|
@@ -188,11 +206,11 @@ Pre-configured swarm teams for engineering workflows. Dispatch via API or schedu
 | `oilgas-field-briefing` | Flat | Daily ops briefing, production summary, safety |
 | `completions-design` | Hierarchical | Frac design, stage spacing, proppant selection |
 
-### Example: Run a Well Engineering Review
+### Example: Well Engineering Review
 
 ```bash
-curl -X POST http://localhost:8100/swarm/run \
-  -H "Authorization: Bearer $GATEWAY_API_KEY" \
+curl -X POST https://oilgas-nanobot-swarm.vibecaas.app/swarm/run \
+  -H "x-api-key: $GATEWAY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "goal": "Review well X-1: TD 12,500 ft TVD, MW=10.5 ppg, shoe at 8,200 ft with FG=14.2 ppg. Check ECD, kick tolerance, and MAASP.",
@@ -204,8 +222,8 @@ curl -X POST http://localhost:8100/swarm/run \
 ### Example: Daily Field Briefing
 
 ```bash
-curl -X POST http://localhost:8100/swarm/run \
-  -H "Authorization: Bearer $GATEWAY_API_KEY" \
+curl -X POST https://oilgas-nanobot-swarm.vibecaas.app/swarm/run \
+  -H "x-api-key: $GATEWAY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "goal": "Generate daily field briefing. Production: 8,200 BOPD, 14.5 MMSCFD gas, 22,000 BWPD. 2 wells shut-in for ESP replacement.",
@@ -217,8 +235,6 @@ curl -X POST http://localhost:8100/swarm/run \
 
 ## Engineering Tools
 
-Standalone tools available to all agents:
-
 | Tool | Calculates |
 |------|-----------|
 | `reservoir_pressure_calc` | Hydrostatic gradient, BHP, pore pressure, fracture gradient |
@@ -226,126 +242,101 @@ Standalone tools available to all agents:
 | `production_engineering_calc` | PI, Vogel IPR, Darcy flow, artificial lift selection |
 | `pipeline_hydraulics_calc` | Pressure drop (D-W), flow regime, line sizing |
 | `well_control_calc` | MAASP, kill mud weight, driller's method |
-| `formation_evaluation_calc` | Archie Sw, sonic porosity, shale volume (GR) |
+| `formation_evaluation_calc` | Archie Sw, Wyllie sonic porosity, GR shale volume |
 | `oilgas_regulatory_reference` | API standards, BSEE, OSHA PSM, EPA emissions |
-
-### Quick Example — ECD Calculation
-
-```bash
-curl -X POST http://localhost:8100/swarm/run \
-  -H "Authorization: Bearer $GATEWAY_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "goal": "Calculate ECD. Mud weight: 10.5 ppg, annular pressure loss: 350 psi, TVD: 9,800 ft.",
-    "mode": "flat"
-  }'
-```
 
 ---
 
 ## API Reference
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/swarm/run` | Dispatch a hierarchical or flat swarm task |
-| `POST` | `/v1/chat/completions` | OpenAI-compatible chat completions |
-| `POST` | `/v1/nellie/dispatch` | Dispatch a named agent team |
-| `GET` | `/health` | System health check |
-| `GET` | `/swarm/health` | Swarm metrics |
-| `GET` | `/sessions` | Recent 10 sessions |
-| `GET` | `/sessions/{id}` | Session detail and audit trail |
-| `GET` | `/docs` | Interactive Swagger UI |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/health` | — | System health check |
+| `GET` | `/` | — | Web dashboard |
+| `GET` | `/docs` | — | Interactive Swagger UI |
+| `POST` | `/swarm/run` | API key | Dispatch an engineering task |
+| `POST` | `/v1/chat/completions` | — | OpenAI-compatible chat |
+| `GET` | `/v1/models` | — | List available models |
+| `GET` | `/swarm/health` | — | Swarm status |
+| `GET` | `/swarm/topology` | — | Agent hierarchy |
+
+### `/swarm/run` Request
+
+```json
+{
+  "goal": "Your engineering question or task",
+  "mode": "hierarchical",
+  "team": "optional-team-name",
+  "metadata": {}
+}
+```
+
+### `/swarm/run` Response
+
+```json
+{
+  "success": true,
+  "session_id": "vercel-1234567890",
+  "goal": "...",
+  "final_answer": "Full engineering analysis with calculations...",
+  "subtask_count": 1,
+  "duration_seconds": 7.6,
+  "mode": "vercel-serverless",
+  "model": "ministral-3:8b"
+}
+```
 
 ---
 
 ## Deployment
 
-### Deploy to Render
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm)
-
-The included `render.yaml` provisions:
-- Web service (nanobot gateway) — Starter plan
-- Managed Redis — Starter plan
-- 5 GB persistent disk for workspace
-- Health checks and auto-restarts
-
-```bash
-# Or deploy via CLI
-render deploy --config render.yaml
-```
-
----
-
 ### Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/NeuralQuantumAI/oilgas-nanobot-swarm)
-
-The dashboard (`/`) is served as a static file. The REST API is deployed as a Python serverless function via [Mangum](https://mangum.io/) (FastAPI → ASGI adapter).
-
-> **Note**: Vercel's serverless functions are stateless. Redis-backed session history and background scheduler require Render or Railway for full functionality. The dashboard and core engineering calculation endpoints work fully on Vercel.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ttracx/oilgas-nanobot-swarm)
 
 ```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Login and deploy
+npm i -g vercel
 vercel login
 vercel --prod
 ```
 
-**Required environment variables** (set in Vercel dashboard → Project → Settings → Environment Variables):
+**Required environment variables in Vercel dashboard:**
 
 | Variable | Description |
 |----------|-------------|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key |
-| `GATEWAY_API_KEY` | Auth key for the API (generate a secure random string) |
-| `REDIS_URL` | Upstash Redis URL (for session state — optional) |
-| `ENABLE_OILGAS_TEAMS` | `true` |
+| `OLLAMA_API_KEY` | Ollama Cloud API key (primary AI) |
+| `NVIDIA_API_KEY` | NVIDIA NIM API key (fallback AI) |
+| `GATEWAY_API_KEY` | Auth key for `/swarm/run` |
 
-**Recommended Redis for Vercel**: [Upstash](https://upstash.com) (serverless Redis, free tier available).
+---
 
-The `vercel.json` in this repo configures:
-- Static dashboard served from `/`
-- FastAPI routes at `/swarm/*`, `/v1/*`, `/health`, `/docs`
-- Security headers on all responses
-- 1-year cache for static assets
+### Deploy to Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ttracx/oilgas-nanobot-swarm)
+
+The `render.yaml` provisions: web service + managed Redis + 5 GB disk.
 
 ---
 
 ### Deploy to Railway
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/oilgas-nanobot?referralCode=neuralquantum)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/oilgas-nanobot)
 
 ```bash
-npm install -g @railway/cli
-railway login
-railway link
-railway up
+npm i -g @railway/cli && railway login && railway up
 ```
-
-Set environment variables in the Railway dashboard:
-- `ANTHROPIC_API_KEY`
-- `GATEWAY_API_KEY`
-- `ENABLE_OILGAS_TEAMS=true`
 
 ---
 
 ### Open in GitHub Codespaces
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/NeuralQuantumAI/oilgas-nanobot-swarm?quickstart=1)
-
-The `.devcontainer/devcontainer.json` provisions:
-- Python 3.11 with all dependencies
-- Redis auto-started
-- Port 8100 forwarded to browser
-- VS Code extensions (Python, Docker, REST Client)
+[![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ttracx/oilgas-nanobot-swarm?quickstart=1)
 
 ---
 
-## Scheduler — Automated Workflows
+## Scheduled Workflows
 
-Configure recurring runs in `workspace/schedules.json`:
+Configure recurring agent team runs in `workspace/schedules.json`:
 
 ```json
 [
@@ -366,40 +357,74 @@ Configure recurring runs in `workspace/schedules.json`:
 ]
 ```
 
-```bash
-python -m nanobot.scheduler.scheduler
+Start the scheduler: `python -m nanobot.scheduler.scheduler`
+
+---
+
+## Project Structure
+
+```
+oilgas-nanobot-swarm/
+├── api/
+│   ├── index.py            # Vercel serverless entry (Ollama + NVIDIA NIM)
+│   └── requirements.txt    # Slim deps for Vercel function
+├── nanobot/
+│   ├── core/               # Agent hierarchy (Queen L0, L1 leads, L2 sub-agents)
+│   ├── tools/
+│   │   ├── oilgas_tools.py     ← 7 engineering calculators
+│   │   ├── web_search.py
+│   │   └── code_runner.py
+│   ├── teams/
+│   │   └── oilgas_teams.py     ← 9 pre-configured O&G agent teams
+│   ├── scheduler/          # Background job scheduler
+│   ├── knowledge/          # Markdown vault (Obsidian-compatible)
+│   ├── state/              # Redis persistence
+│   ├── integrations/       # External services (MS Graph, OpenClaw)
+│   ├── api/                # FastAPI gateway (full-stack mode)
+│   └── static/
+│       └── index.html      # NeuralQuantum-branded web dashboard
+├── docs/                   # Comprehensive documentation
+│   ├── ARCHITECTURE.md
+│   ├── API.md
+│   ├── AGENTS.md
+│   ├── DEPLOYMENT.md
+│   ├── ENGINEERING_TOOLS.md
+│   ├── AGENT_TEAMS.md
+│   └── DEVELOPMENT.md
+├── scripts/                # Setup and launch scripts
+├── .devcontainer/          # GitHub Codespaces config
+├── docker-compose.yml      # Local dev stack (gateway + Redis)
+├── Dockerfile              # Production container
+├── render.yaml             # Render deployment
+├── railway.toml            # Railway deployment
+├── vercel.json             # Vercel deployment
+└── pyproject.toml
 ```
 
 ---
 
 ## Safety Disclaimer
 
-> **ENGINEERING DISCLAIMER**: This system is a decision-support tool for qualified petroleum engineers. All calculations, regulatory references, and recommendations must be verified by licensed engineers before use in operational decisions. This tool does not replace API-certified well control training, IADC WellSharp certification, or compliance with applicable regulations.
+> **⚠️ ENGINEERING DISCLAIMER**: This system is a decision-support tool for qualified petroleum engineers. All calculations, regulatory references, and recommendations must be verified by licensed engineers before use in operational decisions.
 
 ---
 
-## Roadmap
+## Pro Edition
 
-- [ ] LAS/DLIS wireline log file import for automated formation evaluation
-- [ ] SCADA integration via MQTT/OPC-UA for real-time production data
-- [ ] Power BI connector for production dashboards
-- [ ] AFE document builder with operator templates
-- [ ] EPA Subpart W methane emissions calculator
-- [ ] Multilingual support (Arabic, Spanish)
+> **⭐ Pro Edition Coming Soon** — Full hierarchical swarm, Redis memory, knowledge vault, background scheduler, MS 365 integration, and priority support.
+>
+> Contact: [info@neuralquantum.ai](mailto:info@neuralquantum.ai)
 
 ---
 
 ## Contributing
 
 ```bash
-git checkout -b feature/new-engineering-tool
-# make changes, add tests
+git checkout -b feature/my-tool
+# implement, add tests
 pytest tests/ -v
-git push origin feature/new-engineering-tool
-# open PR against main
+git push && open PR
 ```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for coding standards.
 
 ---
 
@@ -411,7 +436,7 @@ MIT License — see [LICENSE](LICENSE).
 
 <div align="center">
 
-**Built on the NeuralQuantum Nanobot Swarm platform**
+**Powered by [VibeCaaS.com](https://vibecaas.com) · a division of [NeuralQuantum.ai LLC](https://neuralquantum.ai)**
 
 © 2026 OilGas Nanobot Swarm powered by VibeCaaS.com a division of NeuralQuantum.ai LLC. All rights reserved.
 
