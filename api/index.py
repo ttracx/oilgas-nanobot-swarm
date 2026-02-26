@@ -18,8 +18,11 @@ from pydantic import BaseModel, Field
 # ── Config ────────────────────────────────────────────────────────────────────
 NVIDIA_API_KEY  = os.getenv("NVIDIA_API_KEY", "").strip()
 GATEWAY_API_KEY = os.getenv("GATEWAY_API_KEY", "").strip()
+OLLAMA_API_KEY  = os.getenv("OLLAMA_API_KEY", "").strip()
 NIM_BASE_URL    = "https://integrate.api.nvidia.com/v1"
-NIM_MODEL       = "z-ai/glm5"
+OLLAMA_BASE_URL = "https://ollama.com/api"
+NIM_MODEL       = "meta/llama-3.3-70b-instruct"   # fast NVIDIA NIM model
+FALLBACK_MODEL  = "z-ai/glm5"                      # available for explicit requests
 
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -55,7 +58,17 @@ Powered by VibeCaaS.com, a division of NeuralQuantum.ai LLC."""
 
 
 def _nim_client() -> AsyncOpenAI:
+    """NVIDIA NIM client — fast, high-quality LLMs."""
     return AsyncOpenAI(base_url=NIM_BASE_URL, api_key=NVIDIA_API_KEY, timeout=55.0)
+
+
+def _ollama_client() -> AsyncOpenAI:
+    """Ollama Cloud client (OpenAI-compatible) — fallback."""
+    return AsyncOpenAI(
+        base_url="https://ollama.com/v1",
+        api_key=OLLAMA_API_KEY or "ollama",
+        timeout=55.0,
+    )
 
 
 def _auth(key: str | None) -> None:
@@ -106,26 +119,43 @@ async def run_swarm(req: SwarmRequest, x_api_key: str | None = Header(default=No
     team_ctx = f"\n\nRequested team: {req.team}" if req.team else ""
     t0 = time.time()
 
-    try:
-        client = _nim_client()
-        resp = await client.chat.completions.create(
-            model=NIM_MODEL,
-            messages=[
-                {"role": "system", "content": OG_SYSTEM},
-                {"role": "user", "content": req.goal + team_ctx},
-            ],
-            temperature=1.0,
-            top_p=1.0,
-            max_tokens=4096,
-            extra_body={
-                "chat_template_kwargs": {
-                    "enable_thinking": False,
-                }
-            },
-        )
-        answer = resp.choices[0].message.content or ""
-    except Exception as e:
-        raise HTTPException(502, f"NIM API error: {str(e)[:300]}")
+    messages = [
+        {"role": "system", "content": OG_SYSTEM},
+        {"role": "user", "content": req.goal + team_ctx},
+    ]
+    answer = ""
+    used_model = NIM_MODEL
+
+    # Try NVIDIA NIM first
+    if NVIDIA_API_KEY:
+        try:
+            resp = await _nim_client().chat.completions.create(
+                model=NIM_MODEL,
+                messages=messages,
+                temperature=0.6,
+                top_p=0.9,
+                max_tokens=4096,
+            )
+            answer = resp.choices[0].message.content or ""
+        except Exception:
+            pass  # fall through to Ollama
+
+    # Fallback: Ollama Cloud
+    if not answer and OLLAMA_API_KEY:
+        try:
+            used_model = "ollama-cloud"
+            nim_resp = await _ollama_client().chat.completions.create(
+                model="llama3.2",
+                messages=messages,
+                temperature=0.6,
+                max_tokens=4096,
+            )
+            answer = nim_resp.choices[0].message.content or ""
+        except Exception as e:
+            raise HTTPException(502, f"All backends failed: {str(e)[:200]}")
+
+    if not answer:
+        raise HTTPException(503, "No AI backend configured. Set NVIDIA_API_KEY or OLLAMA_API_KEY.")
 
     return {
         "success": True,
@@ -136,7 +166,7 @@ async def run_swarm(req: SwarmRequest, x_api_key: str | None = Header(default=No
         "results": [{"role": "assistant", "content": answer}],
         "duration_seconds": round(time.time() - t0, 2),
         "mode": "vercel-serverless",
-        "model": NIM_MODEL,
+        "model": used_model,
     }
 
 
